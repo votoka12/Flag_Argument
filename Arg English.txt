@@ -1,0 +1,337 @@
+✅ JVM Optimization Flags – With Notes & Performance Levels
+Always use the format: -XX:+<flag> to enable
+Boolean flags must use correct capitalization (+UseFMA, not +usefma)
+When testing: you can add -XX:+PrintFlagsFinal to confirm whether the flag is properly applied
+
+📌 Experimental & Vector API (Recommended to Enable)
+-XX:+UnlockExperimentalVMOptions        # Enable experimental flags  
+-XX:+UnlockDiagnosticVMOptions          # Enable diagnostic/debug flags  
+--add-modules jdk.incubator.vector      # Enable Vector API for Java code  
+
+
+
+🧠 CPU & Multithreading Optimization (Highly Recommended for Multi-Core CPUs)
+-XX:+UseAllWindowsProcessorGroups               # Allow JVM to see all CPU groups (Windows)  
+-XX:ActiveProcessorCount=72                     # Force JVM to use full core count even if OS reports incorrectly  
+-Djdk.virtualThreadScheduler.parallelism=72     # Optimize for Java Virtual Threads (Loom)  
+-XX:CICompilerCount=36                          # Increase JIT compilation threads  
+-XX:+TieredCompilation                          # Enable both C1 + C2 compilers (default)  
+-XX:MaxInlineLevel=15                           # Increase method inlining depth  
+-XX:+OptimizeFill                               # Use intrinsic memset/memfill instead of loop filling (faster) 
+
+
+ 
+💪 SIMD & Vector Intrinsics – Related to AVX2, SSE, FMA3
+-XX:UseSSE=4                             # Use up to SSE4.2  
+-XX:+UseAES                              # Enable AES acceleration  
+-XX:+UseAESIntrinsics                    # Use AES-NI instructions  
+-XX:+UseFMA                              # Enable Fused Multiply-Add (FMA3)  
+-XX:+UsePopCountInstruction              # Speed up bit counting  
+-XX:+UseCRC32Intrinsics                  # Use CRC32 hardware instruction (SSE4.2)  
+-XX:+UseSHA                              # Enable SHA hardware hash acceleration  
+-XX:+UseSHA256Intrinsics                 # Hardware SHA-256 (rare)  
+-XX:+UseSHA512Intrinsics                 # Hardware SHA-512 (rare)  
+-XX:+UseFastCRC32                        # Faster CRC32  
+-XX:+UseVectorCmov                       # Conditional move in vector operations  
+-XX:+UseVectorizedMismatchIntrinsic      # Vectorized comparison for Arrays.equals, mismatch...  
+-XX:+UseMultiplyToLenIntrinsic           # Optimized BigInteger.multiply  
+-XX:+UseSquareToLenIntrinsic             # Optimized BigInteger.square  
+-XX:+SuperWordLoopUnrollAnalysis         # Analyze loop unrolling for vectorization  
+-XX:+UseSSE42Intrinsics                  # Force SSE4.2 specifically in some methods  
+-XX:+UseLibmIntrinsic                    # Less precision, higher performance (useful in game/math engines)  
+
+
+
+🧠 Advanced Vectorization (Compute Optimization)
+-XX:+EnableVectorSupport                 # Enable vectorization support in JVM  
+-XX:+EnableVectorReboxing               # Optimize boxing/unboxing during vectorization  
+-XX:+EnableVectorAggressiveReboxing     # Force vectorization even in complex code  
+-XX:+UseBasicIntrinsics                 # Use simpler intrinsic set (less complex than full C2)  
+-XX:+UseXmmI2F                          # Use XMM register to convert int→float (AVX friendly)  
+-XX:+UseXmmRegToRegMoveAll              # Enforce register-to-register XMM moves (faster SIMD throughput)  
+-XX:+UseAVX512Intrinsics                # If your CPU supports AVX-512, test this with ZGC  
+-XX:+UseVectorUnrollLimit               # Helps improve loop vectorization when unrolling + AVX2  
+
+
+
+
+🚀 Advanced CPU Optimization (Rare, Safe, Should Be Tested)
+-XX:+UseLoopPredicate                  # Optimize loop condition (loop hoisting)  
+-XX:+UseXmmLoadAndClearUpper          # Reduce AVX→SSE transition overhead (good for native SIMD)  
+-XX:+ReduceBulkZeroing                # Speed up memory zeroing (new int[], float[])  
+-XX:+UseFPUForSpilling                # Use FPU registers when general registers are full (CPU-bound)  
+-XX:+UseFastStosb                     # (Windows) Use STOSB for faster zeroing blocks  
+-XX:+UseUnalignedAccesses             # Allow unaligned memory access (ByteBuffer, JNI...)  
+-XX:+UseNewCode                       # New C2 backend (experimental)  
+-XX:AzMemPartition=0                  # Assign heap to NUMA node 0 (first socket)  
+-XX:UseAVX                            # Use AVX instructions, values: 0, 1, 2, 3  
+-XX:+UseCRC32Intrinsics               # Use hardware CRC32 instructions  
+-XX:+UseCMoveUnconditionally          # Always use cmov instructions  
+-XX:LoopMaxUnroll=16                  # Loop unroll for AVX/FMA  
+-XX:+TrustFinalNonStaticFields        # Trust final non-static fields are constant  
+-XX:AllocatePrefetchLines=4           # Number of cache lines to prefetch  
+-XX:AllocatePrefetchStepSize=64       # Step size for cache line prefetch  
+-XX:+UseNUMAChunkAwareMemoryAllocation # Improve memory allocation by chunk in NUMA systems  
+-XX:+UseBiasedLocking / -XX:-UseBiasedLocking  # Enable/disable biased locking (test per app)  
+-XX:InlineSmallCodeCount=XXX          # Configure how many small methods get inlined  
+-XX:+UseJVMCICompiler                 # Enable JVMCI for using Graal or external compilers  
+-XX:+UseCondCardMark                  # Optimize write barrier in GC  
+-XX:+UseSuperWord                     # Enable loop vectorization in JIT  
+-XX:+UseRTM                           # If supported (Intel TSX), improve lock-free performance  
+-XX:+UseLargePagesIndividualAllocation # Optimize large RAM NUMA systems  
+-XX:+UseTransparentHugePages          # Allow using Linux transparent hugepages  
+-XX:+UseCodeCacheFlushing             # Enable flushing code cache when full  
+-XX:+UseSpinLoopHint                  # Use PAUSE instruction to optimize spinlocks (X86)  
+-XX:+UseVzeroupper                    # Avoid AVX→SSE transition penalty (AVX2 CPUs)  
+-XX:+UseLWPSynchronization            # Use Lightweight Primitive Synchronization (Linux futex-based locks)  
+-XX:+UseCrc32cIntrinsics              # Use CRC32C instead of standard CRC32 – useful for Netty/checksum  
+-XX:+UseFastJNIAccessors              # Accelerate JNI accessor methods (GetObjectField, SetIntField...)  
+-XX:+UseFastArrayMethods              # Optimized versions of System.arraycopy, Arrays.fill (SIMD-accelerated)  
+-XX:+UseVectorizedHashCode            # SIMD acceleration for Arrays.hashCode (rarely known)  
+-XX:+UseFMAIntrinsics                 # You already have +UseFMA, but Zulu sometimes splits it out  
+-XX:+UseCLMUL                         # Enable carry-less multiply (CLMUL instruction)  
+-XX:+UseCountLeadingZerosInstruction  # Use LZCNT instruction if CPU supports  
+-XX:+UseCountTrailingZerosInstruction # Use TZCNT instruction if CPU supports  
+-XX:+UseOnlyInlinedBimorphic          # Inline bimorphic methods only  
+-XX:+UseDynamicNumberOfCompilerThreads # Scale JIT compiler threads dynamically  
+-XX:+UseLoopInvariantCodeMotion       # Optimize loop hoisting more aggressively  
+
+
+
+🖥️ Windows System-Level Tuning (Rare, Reduce Jitter, Increase Accuracy)
+-XX:+UseThreadPriorities             # JVM uses native thread priorities  
+-XX:+UseHighResolutionTimer          # Enable high-resolution timer (reduce latency jitter)  
+-XX:+UsePreciseTimeStamps            # Improve time measurement precision on Windows  
+-XX:+UseAltSigs                      # Alternative signal handler (rare use case)  
+-XX:PreBlockSpin=10                  # Spin 10 times before context switching on lock wait  
+
+
+
+🧪 Deep Tuning (Rare, For Benchmarking or Native Mods Only)
+-XX:+UseVectorCmov                  # Use SIMD conditional move instead of if-branch  
+-XX:+AggressiveUnboxing             # Force JVM to unbox early (test carefully)  
+-XX:+UseCountedLoopSafepoints       # More accurate safepoint in loops (useful for native threading/debugging)  
+
+
+
+
+
+💾 RAM & Allocation Tuning (Benchmark Carefully)
+-XX:+UseTransparentHugePages         # (Linux) Use Transparent HugePages  
+-XX:+UseTLAB                         # Enable Thread Local Allocation Buffer  
+-XX:+UseLargePages                   # Enable Large Pages (2MB per page, needs memory locking privilege)  
+-XX:LargePageSizeInBytes=2m          # Set size of large pages  
+-XX:PretenureSizeThreshold=16m       # Allocate objects >16MB directly to OldGen  
+-XX:TLABSize=2m                      # Per-thread TLAB size  
+-XX:MaxTLABSize=4m                   # TLAB maximum size (avoid RAM overflow)  
+-XX:+ResizeTLAB                      # Allow JVM to resize TLABs dynamically  
+-XX:SurvivorRatio=8                  # Eden:Survivor ratio tuning (for high object churn)  
+-XX:+AlwaysPreTouch                  # Touch all heap pages at startup (reduce GC spike if Xmx is large)  
+-XX:+UseNUMAChunkInterleaving        # Disable interleaving if NUMA threads are pinned  
+-XX:+UseCompressedOops               # Enable pointer compression (recommended for <32GB RAM)  
+-XX:AllocatePrefetchDistance=192     # Tune memory prefetching (e.g. for chunk load, mesh rebuild)  
+-XX:+UseStringConcatOverflowCheck    # Prevent memory issues in heavy string concatenation  
+-XX:+UseStringCache                  # Internally cache reused Strings (good for high string workloads)  
+-XX:+UseStrongUnorderedTimeStamps    # Balance accuracy and speed of timestamping  
+-XX:+UseNUMAChunkPinning             # Pin memory chunks to NUMA nodes (improves locality)  
+-XX:+UseOnStackReplacement           # Replace code mid-execution, useful for hot loops  
+-XX:+UseStringUTF16                  # If app uses lots of UTF-16 Strings, reduce memory & improve performance  
+-XX:LoopUnrollLimit=256              # Allow wider loop unrolling (performance for heavy loops)  
+-XX:+UseXmmSaveRestore               # Improve SIMD register save/restore performance (on some CPUs)  
+-XX:+UseTLABFastRefills              # Accelerate TLAB refill process  
+-XX:+UseMembar                       # Enable memory barriers on exotic CPUs  
+-XX:+AlwaysActAsServerClassMachine   # Always use Server VM settings even if JVM detects as client-class  
+-XX:+UseNUMAChunkAllocation          # Experimental: Allocate chunks per NUMA node (Zulu 21)  
+-XX:+UseAdaptiveNUMAChunkSizing      # Dynamically balance chunk sizes across NUMA nodes  
+-XX:+UseBiasedLocking                # Lightweight locking (deprecated in JDK 15+, but Zulu may support it)  
+-XX:+UseLocalPrefetch                # Enable local prefetch logic into cache  
+-XX:+ZUncommitRelocationSet          # Let ZGC unmap relocation memory (save RAM, slight latency increase)  
+-XX:+UseTLSCHotSpotCache             # Improve TLS access speed  
+-XX:ReservedCodeCacheSize=512m       # Avoid lag due to JIT code cache flushing  
+-XX:+UseSpinWait                     # Optimize thread spin-wait (lower latency for switching)  
+
+
+
+📂 I/O Optimization & Debug (Rare, OS-Dependent)
+-Djdk.nio.maxCachedBufferSize=1048576                 # Max cached DirectBuffer = 1MB  
+-Dsun.zip.disableMemoryMapping=true                   # Disable mmap when reading zip/jar (avoids crash on heavy modpacks)  
+-Djdk.io.File.enableADS=false                         # (Windows) Disable NTFS Alternate Data Streams → faster I/O  
+-Djdk.util.zip.disableZip64ExtraFieldValidation=true  # Skip validation on nonstandard zips, avoids crash  
+-Djdk.nio.enableFastFileTransfer=true                 # (Linux/macOS) Use sendfile() for file copy  
+
+
+
+🛠 Profiling & Native Debug (Only Enable When Needed)
+-XX:+PreserveFramePointer            # Keep frame pointers → accurate native profiling stacktraces  
+-XX:+StackTraceInThrowable           # More detailed stacktrace in exceptions (helpful in mod debugging)  
+-Dprism.forceGPU=true                # Force JavaFX to use GPU (disable fallback to CPU)  
+-Dprism.vsync=false                  # Disable V-Sync for JavaFX (may increase FPS, risk of tearing)  
+
+
+🔥 TSX, BMI, Advanced SIMD (⚠️ Rare – CPU Support Required)
+-XX:+UseRTMLocking                   # Use TSX/RTM if supported (Intel Haswell+)  
+-XX:+UseRTMDeopt                     # Auto fallback if TSX fails  
+-XX:+UseBMI1Instructions             # Enable BMI1: andn, tzcnt  
+-XX:+UseBMI2Instructions             # Enable BMI2: pext, pdep  
+-XX:+EliminateLocks                  # Eliminate unnecessary locks  
+-XX:+UseVectorizedHashCode           # SIMD acceleration for String.hashCode()  
+-XX:+UseXmmRegToRegMoveAll           # Pure XMM register moves  
+-XX:+EnableJVMCI                     # Enable JVMCI if not already  
+
+
+
+🗂 Heap & GC Tuning (Rare, Improves Stability)
+-XX:MinHeapFreeRatio=20              # Keep 20% of heap free → reduces sudden GC  
+-XX:MaxHeapFreeRatio=40              # Shrink heap when usage is under 60%  
+-XX:+HeapDumpOnOutOfMemoryError      # Automatically dump heap on OOM (help debug memory leaks)  
+-XX:+UseRTMForStackLock              # Use RTM for stack locks (lighter than object monitors)  
+-XX:RTMRetryCount=5                  # Number of retries if RTM fails  
+-XX:+UseSimpleArrayEquals            # Use simplified Arrays.equals() implementation  
+-XX:+UseTypeProfileInlining          # Profile object types for better inlining of abstract/generic methods  
+-XX:+TraceSuperWord                  # Trace SuperWord vectorization behavior (for SIMD debug)  
+-XX:+UseOnlyInlinedBCE               # Disable bounds check elimination for methods not inlined  
+-XX:+EagerJVMCI                      # Initialize JVMCI earlier to reduce startup latency  
+
+
+
+
+
+
+
+🔧 Native & JNI Tuning (Rare, High Performance)
+-XX:-UseBiasedLocking                    # Disable biased locking → reduce overhead from frequent lock/unlock  
+-XX:+UseNUMAChunkInterleaving            # Better memory distribution across NUMA (multi-socket)  
+-XX:InlineSmallCode=1000                 # Raise threshold for small methods to be inlined  
+-XX:+OptimizeStringConcat                # Optimize string concatenation (useful for chunk-related workloads)  
+-XX:+UseJNICriticalNatives               # Enable zero-copy JNI (crashes if used incorrectly)  
+-XX:+UseClMulIntrinsics                  # Use carry-less multiply (CLMUL instruction)  
+-XX:+EnableContended -XX:-RestrictContended # Optimize @Contended fields (reduce false sharing)  
+-XX:+StressLCM                           # Not for long-term use; stress loops to find bottlenecks  
+-XX:+StressGCM                           # Force all codegen options to test for performance or memory leaks  
+-XX:+UseVectorStubs                      # Allow use of native stubs for vector operations not yet intrinsified  
+-XX:+UseSuperWordLoopUnrollAnalysis      # Works with +UseSuperWord; improve vector unrolling (some builds may conflict) 
+
+
+ 
+🗑️ GC Optimization
+-XX:+UseShenandoahGC                     # Alternative GC to ZGC (low pause)  
+-XX:+UseEpsilonGC                        # "No-op" GC (for memory stress testing only)  
+-XX:+ShenandoahUncommit                  # Release unused memory pages (Shenandoah only)  
+-XX:+ShenandoahHumongousMoves           # Optimize movement of large objects in Shenandoah  
+-XX:+ShenandoahRegionSampling           # Enable region-based sampling (debug/monitoring)  
+-XX:+DisableExplicitGCOnSystemGC        # Prevent JVM-initiated System.gc() (Java 17+)  
+
+
+
+🗑️ ZGC Optimization (Low Latency GC for Large RAM Systems)
+-XX:+UseZGC                             # Enable Z Garbage Collector  
+-XX:ZUncommitDelay=10000                # Delay before unmapping unused memory pages (ms)  
+-XX:ZCollectionInterval=128             # Delay between two ZGC runs  
+-XX:+ZProactive                         # Proactively collect garbage  
+-XX:+UseStringDeduplication             # Deduplicate repeated strings in memory  
+-XX:SoftMaxHeapSize=140G                # "Soft" heap limit to avoid sudden full GCs  
+-XX:+UseZStore                          # Enable compressed ZGC storage (saves memory)  
+-XX:ParallelGCThreads=1                 # Limit number of GC threads (can improve determinism)  
+-XX:+ZGenerational                      # (Zulu 21+) Enable generational ZGC (Eden + OldGen)  
+
+
+
+🛠️ System Timing & Locking
+-XX:+UseFastUnorderedTimeStamps         # Use RDTSC instruction for fast timing  
+-XX:LockingMode=0                       # Use thin locking (disable biased locking)  
+
+
+
+
+🧪 Parallel Reference GC Support
+-XX:+ParallelRefProcEnabled             # Parallelize WeakRef/Finalizer/etc. processing  
+
+
+
+🚫 Prevent Unwanted GC & Graal JIT
+-XX:+DisableExplicitGC                 # Block System.gc() from 3rd-party mods  
+-XX:-UseGraalJIT                       # Disable Graal JIT and use C2 instead  
+
+
+
+📊 Logging & Performance Monitoring
+-Xlog:gc*,safepoint:file=gc.log:tags,uptime,time,level  # Log GC and safepoint data  
+-XX:+PrintCompilation                    # Log which methods get JIT-compiled  
+-XX:+PrintFlagsFinal                     # Output actual flag values used by JVM  
+-XX:+HeapDumpOnOutOfMemoryError          # Dump heap on OOM (debug mods easier)  
+-XX:+PrintInlining                       # See which methods are being inlined  
+-XX:+PerfDisableSharedMem                # Disable PerfData shared memory (useful if not using monitoring tools)  
+-XX:+UnlockJavaMonitoringAndManagement   # Enable Java monitoring  
+-XX:+PrintAssembly                       # Print native machine code (C2, extremely detailed)  
+-XX:+TraceLinearScanLevel                # Trace internal linear scan register allocation  
+-XX:+PrintCFGToFile                      # Output control flow graph for JIT debugging  
+-XX:+PrintOptoAssembly                   # Dump optimized machine code from C2  
+-XX:+PrintIRWithLIRGraphs                # Dump intermediate representation (IR) for Graal  
+-XX:+TraceDeoptimization                 # Log when methods are deoptimized (important with native agent injection)  
+-XX:+LogCompilation                      # Output XML file with full JIT behavior  
+-XX:+TraceOSR                            # Trace loops replaced with On-Stack Replacement (OSR)  
+-XX:+PrintInliningDetailed               # More detailed version of -XX:+PrintInlining  
+
+
+
+⚙️ Minecraft Mod Fixes & Custom Options
+-Dfml.ignoreInvalidMinecraftCertificates=true         # Forge fix: ignore invalid cert  
+-Dfml.ignorePatchDiscrepancies=true                   # Forge fix: ignore patch mismatches  
+-Djava.net.preferIPv4Stack=true                       # Prefer IPv4 over IPv6  
+-XX:-EnableDynamicAgentLoading                        # Disable agent loading at runtime (security)  
+-javaagent:D:\Agent\multicpu_agent.jar                # Your custom multithreaded Java Agent  
+-Djava.util.concurrent.ForkJoinPool.common.parallelism=72  # ForkJoin optimization for modpacks  
+-Dio.netty.recycler.maxCapacityPerThread=0            # Disable Netty object recycler (avoid memory leaks)  
+-Dgraal.ExplicitUnsafe=true                           # Enable Unsafe access (for mod or native agent)  
+-Dgraal.CompileThreads=24                             # Optimize GraalVM compilation threads  
+
+
+
+🔬 GraalVM / JVMCI-Specific Flags
+-Dgraal.UseSVE=true                         # For ARMv8 SVE (test native vector JIT future)  
+-Dgraal.OptMacroFusion=true          	    # Optimize macro-op fusion in Graal JIT  
+-Dgraal.OptAvoidSpeculation=true            # Avoid speculative branches (reduce multicore render overhead)  
+-XX:+JVMCIPrintProperties                   # List all available JVMCI/Graal options  
+
+
+
+🧰 Non-Flag Tweaks Worth Testing
+-Xbatch                       # Compile immediately, disable background JIT (accurate benchmarking)  
+-Xcomp                        # Compile everything ahead of time (no interpreter)  
+-Xverify:none                 # Disable bytecode verifier → faster startup  
+-XX:+UseStringLatin1          # Use compact Latin1 strings (save RAM for ASCII-heavy strings)  
+
+🔧 Legacy & Deprecated (For Reference)
+# No longer supported, but documented for historical or testing interest  
+-XX:+UseMMX                   # (Old JVMs only)  
+-XX:+Use3DNOW                 # (Obsolete AMD instructions)  
+-XX:+UseVTune                 # (Intel VTune integration)  
+-XX:+UseG1GC                  # GC older than ZGC  
+-XX:+UseBiasedLocking         # Removed from JDK 17+  
+⚙️ Extremely Rare Flags – Often Missing from PrintFlagsFinal
+-XX:+UseFastEmptyMethods             # Speed up stub/trampoline methods  
+-XX:+UseFastClassInitChecks          # Optimize static class init checks  
+-XX:+UseThreadCpuClocks              # Use CPU time instead of wall-clock (accurate profiling)  
+-XX:+EnableVectorUnrollLimit         # Improve vectorization with loop unrolling + AVX2  
+-XX:+UseSIMDForArrayCopy             # SIMD-based System.arraycopy instead of memcpy (rare)  
+-XX:+UseMicroLocking                 # Optimized micro-locks (e.g., per-chunk or thread-local locks)  
+-XX:+InlineNotifyWait                # Inline wait/notify logic if possible (reduce context switches)  
+
+
+
+📦 JVM Max Memory Setting
+-Xmx151G     			     # Set maximum heap size (compatible with ZGC + LargePage)  
+
+
+✅ Example Used Args – Tested for Smooth Chunk Loading
+I use Zulu 21.42.19 (21.0.7)
+OS: WIndows 11 Pro for Workstation
+Progressor 2xE5 2699v3(Unlock Turbo)
+Ram: 160GB DDR4 32Gb ECC (3x 2DRx4 and 2x 4Rx4) Skhynix 
+GTX 1660
+PSU VSP 1000W 
+
+
+-Xmx151G -XX:+UnlockExperimentalVMOptions --add-modules jdk.incubator.vector -XX:+UseAllWindowsProcessorGroups -XX:ActiveProcessorCount=72 -Djdk.virtualThreadScheduler.parallelism=72 -XX:CICompilerCount=36 -XX:+TieredCompilation -XX:MaxInlineLevel=15 -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+EnableVectorAggressiveReboxing -XX:+UseTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseAES -XX:UseSSE=4 -XX:+UseZGC -XX:ZUncommitDelay=10000 -XX:ZCollectionInterval=128 -XX:+ZProactive -XX:+UseStringDeduplication -XX:SoftMaxHeapSize=140G -XX:+UseFastUnorderedTimeStamps -XX:LockingMode=0 -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC -XX:-UseGraalJIT -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:-EnableDynamicAgentLoading -XX:+UseNUMA -XX:+UseNUMAInterleaving -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseCountedLoopSafepoints -XX:+ResizeTLAB -Dsun.zip.disableMemoryMapping=true -Djdk.io.File.enableADS=false -XX:+UseThreadPriorities -Dprism.vsync=false -XX:ThreadPriorityPolicy=1 -XX:CompileThreshold=1500 --enable-preview -XX:+UnlockDiagnosticVMOptions -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+OptimizeStringConcat -XX:InlineSmallCode=900 -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+UseSHA -XX:+UseCRC32Intrinsics -XX:+UsePopCountInstruction -XX:UseAVX=2 -XX:+EliminateLocks -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSHA256Intrinsics -XX:+UseSSE42Intrinsics -XX:+UseSHA512Intrinsics -XX:AllocatePrefetchDistance=256 -XX:+PreserveFramePointer -XX:LoopMaxUnroll=32 -XX:AllocatePrefetchLines=3 -XX:AllocatePrefetchStepSize=4 -XX:+UseCondCardMark -XX:+UseSuperWord -XX:+UseCMoveUnconditionally -XX:+UseUnalignedAccesses -XX:+UseVectorCmov -XX:+UseLargePagesIndividualAllocation -XX:+UseCodeCacheFlushing -XX:+EnableContended -XX:-RestrictContended -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:LoopUnrollLimit=256 -XX:+UseFastJNIAccessors -XX:+AlwaysActAsServerClassMachine -XX:+UseAdaptiveNUMAChunkSizing -XX:TLABSize=712k -XX:ReservedCodeCacheSize=512m -XX:+UseXmmI2F -XX:+UseXmmRegToRegMoveAll -XX:+ZGenerational -Xverify:none -XX:+UseXmmLoadAndClearUpper -XX:+UseCLMUL -XX:+UseCountLeadingZerosInstruction -XX:+UseCountTrailingZerosInstruction -XX:+UseOnlyInlinedBimorphic -XX:+UseDynamicNumberOfCompilerThreads -XX:+UseLoopInvariantCodeMotion
+
+
