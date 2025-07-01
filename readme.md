@@ -25,8 +25,8 @@ The list has been compiled and tested on:
 
 ## 📄 Files
 
-- `Zgc Flags English.md`: Bilingual (English + Vietnamese) list of JVM flags grouped by category, with technical notes
-- `ZGC.txt` *(optional)*: Original Vietnamese version
+- `Arg English.md`: Bilingual (English + Vietnamese) list of JVM flags grouped by category, with technical notes
+- `Arg Tiếng Việt.txt` *(optional)*: Original Vietnamese version
 
 ---
 
