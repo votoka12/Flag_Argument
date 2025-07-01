@@ -1,5 +1,13 @@
 # JVM Performance Flags for Minecraft & Java Applications
 
+
+
+**⚠️ Warning / Cảnh Báo**
+>**⚠️ Some of the flags listed may be deprecated in older JVM versions, unavailable in newer ones, or specific to custom/internal builds.
+Please research and test each flag carefully to ensure compatibility with your system and Java distribution.**
+
+>**⚠️ Một số flag trong danh sách có thể đã bị loại bỏ ở các phiên bản JVM cũ, không còn tồn tại ở các phiên bản JVM mới, hoặc chỉ có trong các bản JVM tùy chỉnh/nội bộ.
+Bạn nên tự nghiên cứu và kiểm tra từng flag để đảm bảo phù hợp với hệ thống và bản Java mà bạn đang sử dụng.**
 This repository provides a comprehensive list of **JVM optimization flags**, tailored for:
 
 - 🧠 **High-performance Java applications**
