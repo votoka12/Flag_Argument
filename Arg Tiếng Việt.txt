@@ -1,6 +1,3 @@
-
-
-
 ✅ JVM Flags Tối Ưu - Có Ghi Chú & Mức Độ Hiệu Năng
 Luôn viết dạng: -XX:+<flag> để bật
 Luôn viết dạng: -XX:+<flag> để bật
@@ -13,6 +10,13 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UnlockDiagnosticVMOptions			#Bật flag gỡ lỗi
 --add-modules jdk.incubator.vector 		# Bật Vector API cho code Java
 
+
+🛑 Flags "ẩn" hoặc hidden trong PrintFlagsFinal
+Để lộ toàn bộ flag, bạn có thể thử:
+java -XX:+UnlockDiagnosticVMOptions -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions -XX:+PrintFlagsWithComments
+Hoặc dùng thêm:
+-XX:+PrintFlagsRanges
+
 🧠 Tối ưu CPU & đa luồng (Rất nên dùng cho CPU nhiều nhân)
 -XX:+UseAllWindowsProcessorGroups 		# Cho phép JVM thấy toàn bộ CPU group (Windows)
 -XX:ActiveProcessorCount=72 			# Ép JVM dùng đủ số luồng dù hệ điều hành không báo đúng
@@ -21,6 +25,8 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+TieredCompilation 				# Dùng cả C1 + C2 compiler (mặc định)
 -XX:MaxInlineLevel=15 				# Tăng độ sâu inline function
 -XX:+OptimizeFill 				# Dùng intrinsic memset/memfill thay loop fill (nhanh hơn)
+-XX:+UsePinnedThreads				#→ Dùng khi bạn ép luồng theo affinity. Giúp tránh việc JVM tự di chuyển thread sang CPU khác.
+
 
 💪 SIMD & Vector Intrinsics – Rất liên quan AVX2, SSE, FMA3
 -XX:UseSSE=4                            # Dùng tối đa SSE4.2
@@ -40,6 +46,13 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+SuperWordLoopUnrollAnalysis        # Phân tích unroll cho vector
 -XX:+UseSSE42Intrinsics			#Gần giống UseSSE=4 nhưng ép rõ SSE4.2 cho method cụ thể
 -XX:+UseLibmIntrinsic			#Giảm độ chính xác nhưng tăng tốc (dùng trong game/math engine)
+-XX:+EnableValhalla			#Nếu bạn đang thử nghiệm build Java Valhalla (inline class), flag này giúp tối ưu layout cho flat data.
+-XX:+UseVectorFastHash 			#Nếu dùng JDK có patch SIMD hash (như OpenJ9 hoặc Azul), giúp tăng tốc hashCode() của các kiểu cơ bản bằng vector.
+
+
+
+
+
 
 
 🧠 Vector hóa nâng cao (Tăng hiệu năng tính toán)
@@ -51,7 +64,9 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UseXmmRegToRegMoveAll			#Ép dùng move register XMM→XMM thay vì memory move (tăng SIMD throughput)
 -XX:+UseAVX512Intrinsics			#Nếu máy có AVX-512, bạn có thể thử flag này (ZGC + AVX512).
 -XX:+UseVectorUnrollLimit			#Giúp tăng chính xác vector hóa khi kết hợp unroll loop với AVX2, tối ưu loop vector
-
+-XX:+UseRestrictedVectorization			## Dùng vector hóa kể cả trong branch phức tạp
+-XX:+EnableVectorGatherScatter   		# Cho phép vector gather/scatter với C2
+-XX:+VectorizeHashCode				#Tăng tốc String.hashCode() và các hàm hashCode() bằng SIMD/AVX.
 
 
 
@@ -98,7 +113,21 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UseOnlyInlinedBimorphic			#Inline method dạng bimorphic
 -XX:+UseDynamicNumberOfCompilerThreads		#Scale thread compile
 -XX:+UseLoopInvariantCodeMotion			#Loop hoisting sâu
-
+-XX:+UseCompilerSafepoints			#Cho thêm safepoint ở các đoạn compile,hữu ích nếu bạn muốn tối ưu việc dừng world thread mà không gây pause.
+-XX:+SegmentedCodeCache				#Phân chia code cache theo từng mục đích: profiled, non... Giúp tránh đầy cache và tối ưu tách biệt hot code.
+-XX:+UseJumpTables				#Cho phép JIT dùng jump tables cho switch-case — có thể tăng tốc một số đoạn control-flow nặng.
+-XX:+InlineTypePassFieldsAsArgs			#Cho JVM truyền từng trường(field) của inline class như argument trực tiếp, boost hiệu năng nếu dùng Valhalla 
+-XX:+UseMallocOnlyForCodeHeap			#Chỉ áp dụng malloc cho code heap — giảm fragmentation nếu code cache lớn (như khi dùng nhiều JIT thread).
+-XX:NUMAChunkResizeWeight=15			#Nhanh nhạy hơn trong việc điều chỉnh chunk
+-XX:NUMASpaceResizeRate=1610612736		#Tăng tốc resize vùng heap 
+-XX:+NUMAStats					#Nếu bạn muốn thấy thống kê NUMA trong log JVM (dùng để phân tích log)
+-XX:+UseUnalignedAccessesInIntrinsics
+-XX:+UseLWThreads                    		# Light-weight thread pinning (ẩn, Java 22+)
+-XX:+UseEagerInitialization
+-XX:+DeoptimizeALot                 		# (Benchmark so sánh khả năng recover khi JIT bị rollback)
+-XX:+UseCriticalJavaThreadPriority
+-XX:-UseProfiledLoopPredicate
+-XX:-UseJumpTables
 
 
 
@@ -117,6 +146,13 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+AggressiveUnboxing				# Ép JVM bỏ boxing sớm (test kỹ trước khi bật)
 -XX:+UseCountedLoopSafepoints 			# Safepoint trong loop chính xác (debug native nhiều thread)
 
+
+
+
+
+
+
+
 💾 RAM tối ưu & cấp phát hiếm (Cẩn trọng, benchmark kỹ)
 -XX:+UseTransparentHugePages 			# (Linux) Dùng Transparent HugePages tự động
 -XX:+UseTLAB					#Sử dụng TLAB
@@ -128,7 +164,6 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+ResizeTLAB 				# Cho phép JVM tự điều chỉnh TLAB theo tải
 -XX:SurvivorRatio=8 				# Điều chỉnh tỷ lệ Eden:Survivor (benchmark nếu object churn cao)
 -XX:+AlwaysPreTouch 				# Chạm toàn bộ heap trước khi chạy (giảm lag nếu Xmx lớn)
--XX:+UseNUMAChunkInterleaving 			# Tắt interleave chunk nếu cố định luồng NUMA (advanced)
 -XX:+UseCompressedOops				#Tối ưu nén pointer với ram từ 32Gb trở xuống
 -XX:AllocatePrefetchDistance=192 		# Prefetch memory tốt hơn khi load chunk / rebuild mesh
 -XX:+UseStringConcatOverflowCheck		#Giúp tránh lỗi tràn bộ nhớ trong concat string
@@ -150,6 +185,13 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UseTLSCHotSpotCache			#Cải thiện truy cập TLS
 -XX:ReservedCodeCacheSize=512m			#Tăng code cache để tránh việc JVM phải dọn dẹp code cache gây lag trong runtime.
 -XX:+UseSpinWait				#Giúp thread đợi spin hiệu quả hơn, có thể giảm độ trễ thread switching.
+-XX:+CompactStrings				#Nếu dùng nhiều chuỗi Latin-1, giảm RAM.
+-XX:+AlwaysPreTouchCodeHeap			#Pre-touch memory dành cho code cache — tránh page fault khi JIT hoạt động mạnh (thường dùng trong benchmark).
+-XX:+OptoBundling				#Kích hoạt việc "bundling" instruction(gom lệnh lại thành nhóm tối ưu hơn) trong giai đoạn sinh mã máy của C2 
+-XX:+UseInlineCaches
+-XX:ContendedPaddingWidth=256   		# Padding thêm giữa field dùng @Contended
+-XX:+AlignObjectFields           		# Align field để tránh false sharing
+
 
 
 
@@ -167,18 +209,83 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+StackTraceInThrowable 			# Tăng chi tiết stacktrace khi throw (giúp debug mod)
 -Dprism.forceGPU=true				#Ép JavaFX chạy GPU thay vì CPU fallback
 -Dprism.vsync=false				#Tắt đồng bộ V-Sync, có thể tăng FPS (có thể gây tearing)
+-XX:+UseNewCode					#Bật một phiên bản mới của code path trong JVM, có thể là compiler, runtime hoặc một module thử nghiệm.
+-XX:+UseNewCode2				#Giống UseNewCode, bật một bản thử nghiệm mới khác trong JVM.
+-XX:+UseNewCode3				#Tương tự UseNewCode và UseNewCode2, bật thử nghiệm một module hoặc đoạn mã mới trong JVM.
+-XX:+UseNewLongLShift				# Bật codegen mới cho phép dịch trái (<<) kiểu long trong JIT compiler.
+-XX:+UseUnalignedLoadStores      		# Cho phép load/store không cần align, hữu ích với AVX2
+-XX:+DoEscapeAnalysis            		# Đảm bảo Escape Analysis luôn bật (nhiều JDK build tắt)
+-XX:+UseReciprocalDivide         		# Dùng phép chia nghịch đảo nhanh hơn
+
+
+
 
 🔥 TSX, BMI, Advanced SIMD (⚠️ Rất hiếm, cần máy hỗ trợ)
--XX:+UseRTMLocking                      # Dùng TSX/RTM nếu CPU hỗ trợ (Haswell+)
--XX:+UseRTMDeopt                        # Tự động fallback nếu TSX fail
--XX:+UseBMI1Instructions                # BMI1: andn, tzcnt (Cần JVM đặc biệt)
--XX:+UseBMI2Instructions                # BMI2: pext, pdep (hiếm, như trên)
--XX:+EliminateLocks                     # Bỏ các lock không cần thiết
--XX:+UseVectorizedHashCode		#SIMD hóa String.hashCode()
--XX:+UseXmmRegToRegMoveAll		#XMM move register-only
--XX:+EnableJVMCI			#Kích hoạt JVMCI nếu không mặc định bật.
+-XX:+UseRTMLocking                    		#Dùng TSX/RTM nếu CPU hỗ trợ (Haswell+)
+-XX:+UseRTMDeopt                     		#Tự động fallback nếu TSX fail
+-XX:+UseBMI1Instructions               		#BMI1: andn, tzcnt (Cần JVM đặc biệt)
+-XX:+UseBMI2Instructions              		#BMI2: pext, pdep (hiếm, như trên)
+-XX:+EliminateLocks                    		# Bỏ các lock không cần thiết
+-XX:+UseVectorizedHashCode			#SIMD hóa String.hashCode()
+-XX:+UseXmmRegToRegMoveAll			#XMM move register-only
+-XX:+EnableJVMCI				#Kích hoạt JVMCI nếu không mặc định bật.
+-XX:+TraceDeoptimizationReasons			#In chi tiết lý do vì sao method bị deoptimize. Khác với +TraceDeoptimization.
+-XX:+EnableJVMCIProduct				#Bật các tính năng JVMCI như graal.ShowGraph nếu bản build cho phép.
+-XX:+TraceIntrinsification			#Ghi log mỗi method nào được dùng intrinsic JIT thay vì bytecode.
+-XX:+ForceNUMA					#Ép bật NUMA ngay cả khi BIOS hoặc OS không báo NUMA rõ ràng.
+-XX:+UseFastIntegerArithmetic			#SIMD hóa phép cộng/trừ/mul trong Integer – build đặc biệt.
+-XX:+OptimizeJumpTables				#Tối ưu switch-case jump table (hiếm gặp nhưng hiệu quả khi mod switch-heavy).
+-XX:+UseLowLatencyHeapRegionPolicy		#ZGC build đặc biệt – giúp giảm thời gian delay khi thay đổi heap region.
+-XX:+EnableThreadLocalAllocation		#(không phải +UseTLAB)Tối ưu phân bổ bộ nhớ per thread.
+-XX:+AggressiveHeap				#Oracle JVM cổ(rất cũ)Tự scale heap và tuning theo máy. Không nên dùng bản hiện đại.
+-XX:+UseTrivialHashing				#Gán hashCode() đơn giản hơn cho object để giảm overhead hashTable.
+-XX:+AlignVector                          	# Ép JVM căn chỉnh vector cho các phép toán SIMD – có thể tăng hiệu năng nhưng cần CPU hỗ trợ tốt
+-XX:+AlwaysAtomicAccesses                	# Ép mọi truy cập field đều là atomic – hữu ích để test thread-safety nhưng sẽ giảm hiệu năng
+-XX:+AlwaysCompileLoopMethods            	# JVM sẽ luôn compile các method chứa vòng lặp, thay vì để interpreter chạy – giúp tăng hiệu năng vòng lặp nhỏ
+-XX:+AlwaysPreTouchStacks                	# Preload trước toàn bộ bộ nhớ stack cho mỗi thread – giảm page fault khi thread mới khởi chạy
+-XX:+AlwaysRestoreFPU                    	# JVM sẽ luôn khôi phục thanh ghi FPU sau mỗi native call – đảm bảo chính xác toán học, tránh lỗi ẩn
+-XX:+AlwaysTenure                        	# Ép tất cả object vào old generation ngay từ đầu – dùng để test GC hoặc behavior long-lived object
+-XX:+CICompilerCountPerCPU               	# JVM tự động đặt số luồng JIT theo số CPU thực tế – tối ưu compile cho đa nhân
+-XX:+DeferInitialCardMark                	# Hoãn ghi mark GC (card table) ban đầu để tối ưu hiệu suất khi nhiều cấp phát diễn ra nhanh
+-XX:+DisableExplicitGC                   	# Vô hiệu hóa lệnh `System.gc()` – ngăn ứng dụng gọi full GC thủ công, giữ GC hoạt động tự động ổn định
+-XX:+ExpandSubTypeCheckAtParseTime       	# Mở rộng kiểm tra kiểu phụ (subtype) từ sớm khi parsing bytecode – giúp tối ưu phân tích kiểu
+-XX:+ExplicitGCInvokesConcurrent         	# Biến `System.gc()` thành concurrent GC (thay vì stop-the-world) – hữu ích khi muốn tránh lag
+-XX:+ForceTimeHighResolution             	# Ép JVM dùng đồng hồ có độ chính xác cao(hi-res) cho đo thời gian - phù hợp với ứng dụng cần timing chính xác
+-XX:+ForceUnreachable                    	# Ép JVM xoá nhánh không thể đi đến trong mã – giúp tối ưu JIT bytecode sạch hơn
+-XX:+HeapDumpOnOutOfMemoryError          	# JVM sẽ tạo file heap dump nếu gặp lỗi OOM – cực kỳ hữu ích để debug lỗi bộ nhớ
+-XX:+G1VerifyHeapRegionCodeRoots         	# Bật kiểm tra nội dung heap trong G1GC – phát hiện lỗi sai lệch vùng nhớ trong lúc GC
+-XX:+AllowParallelDefineClass            	# Cho phép load class song song từ nhiều luồng – tăng tốc độ class loading nếu classloader thread-safe
+-XX:+UseXMMForObjInit				#Cho phép sử dụng thanh ghi XMM (SSE2) để khởi tạo object (zero-initialization memory của object).
+-XX:+UseXmmI2D					#Dùng thanh ghi XMM để convert số nguyên(int) sang số thực(double) gọi là Integer-to-Double conversion (I2D).
+-XX:+UseSystemMemoryBarrier			#JVM sẽ sử dụng hàm gọi hệ điều hành hoặc bộ lệnh cung cấp bởi hệ thống để thực hiện memory barrier
+-XX:+UseStoreImmI16				#Cho phép JIT compiler sinh lệnh máy tối ưu kiểu store Immediate 16-bit Integer (ImmI16)
+-XX:+UsePoly1305Intrinsics			#Bật tính năng sử dụng intrinsics cho thuật toán Poly1305 để tận dụng lệnh phần cứng đặc biệt để tăng tốc xử lý.
+-XX:+UseSHA3Intrinsics				#Bật tính năng sử dụng intrinsic functions (hàm nội tại) của CPU để tính toán hàm băm SHA-3 nhanh hơn.
+-XX:+AggressiveOpts				#Bật các tối ưu JIT "chưa chính thức" sẽ được bật mặc định trong bản tương lai
 
 
+
+
+
+
+
+
+
+
+
+
+🧬 ZGC & Thread flags rất đặc biệt (ZGC >= JDK 21)
+-XX:+ZVerifyViews				#Kiểm tra các ZPage View Map – chỉ nên dùng nếu debug GC memory leak
+-XX:+ZUncommitRelocationSetImmediate		#Unmap các relocation set không chờ delay – tiết kiệm RAM, nhưng có thể lag nhẹ.
+-XX:+ZRetainPageTable				#Debug: giữ nguyên page table sau khi GC xong, dễ trace memory.
+
+🔬 GraalVM hoặc debug-only flags
+-XX:+TraceInlineCacheClearing			#Log khi IC (inline cache) bị xóa – rất sâu trong tiered JIT.
+-Dgraal.TraceEscapeAnalysis=true		#Theo dõi EA (Escape Analysis) để biết method nào không bị allocate object.
+-Dgraal.OptTailCalls=true			#Cho phép tail-call optimization trong Graal (rất hiếm).
+-Dgraal.OptRemoveNeverExecutedCode=true		#Xóa branch không bao giờ chạy, giảm kích thước mã JIT.
+-XX:+UseHeapRegionScanPolicy			#Chỉ thấy trong GraalVM hoặc bản HotSpot có GC tùy chỉnh.
+-XX:+UseGraalStubs               		# Graal stub vector ops nhanh hơn
 
 
 
@@ -198,10 +305,10 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 
 
 🔧 Native & JNI tuning (Hiếm, hiệu năng cao)
--XX:-UseBiasedLocking 				# Tắt biased locking → giảm overhead lock/unlock nhiều lần
+-XX:+UseBiasedLocking 				# Tắt biased locking → giảm overhead lock/unlock nhiều lần
 -XX:+UseNUMAChunkInterleaving 			# Phân phối memory tốt hơn trên hệ NUMA (multi-socket)
 -XX:InlineSmallCode=1000			#Tăng ngưỡng inline code nhỏ, giúp JIT tối ưu tốt hơn.
--XX:+OptimizeStringConcat	#Tối ưu nối chuỗi, hữu ích khi có nhiều thao tác string liên quan đến chunk data.
+-XX:+OptimizeStringConcat			#Tối ưu nối chuỗi, hữu ích khi có nhiều thao tác string liên quan đến chunk data.
 -XX:+UseJNICriticalNatives			#Zero-copy JNI, crash nếu sai
 -XX:+UseClMulIntrinsics				#Dùng carry-less multiply (CLMUL)
 -XX:+EnableContended -XX:-RestrictContended 	#Tối ưu cho các trường @Contended trong Java để tránh false sharing
@@ -209,6 +316,20 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+StressGCM					#Test thử tất cả lựa chọn,ép code gen sinh mã tối đa để tìm lỗi hoặc leak hiệu năng.
 -XX:+UseVectorStubs				# Cho phép dùng native stub cho vector operation chx đc intrinsified.
 -XX:+UseSuperWordLoopUnrollAnalysis		# +UseSuperWord (có thể bị xung đột nếu build không hỗ trợ cả hai rõ ràng)
+-XX:+OverrideVMProperties			# Cho phép JVM ghi đè (override) các property hoặc cấu hình VM khi khởi động.
+-XX:+OptoScheduling				# Bật hoặc tắt lập lịch (scheduling) các tác vụ tối ưu hóa trong trình biên dịch C2 (server compiler).
+-XX:+PerfBypassFileSystemCheck			#Bật tính năng bỏ qua kiểm tra hệ thống file (file system check) cho PerfData trong JVM.
+-XX:+PerfAllowAtExitRegistration		#Cho phép JVM đăng ký (register) các hook hoặc callback PerfData để thực hiện khi JVM thoát (at exit).
+-XX:+InlineVirtualCalls                   	# Inline cả call ảo nếu đoán được target
+-XX:+UseCHA
+-XX:-TieredCompilation				#Nếu bạn muốn ép thẳng C2 luôn, không cần C1
+-XX:+UseJVMCINativeLibrary			#Cho JVM biết là bạn muốn dùng Graal JIT đã được biên dịch sẵn dưới dạng native shared library
+-XX:TieredStopAtLevel=1				#Dừng tiered compilation ở level 1 (tức là chỉ dùng C1 compiler hoặc Graal JIT ở "shallow" tier).
+
+
+
+
+
 
 
 🗑️ Tối ưu GC
@@ -231,6 +352,13 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UseZStore					# Giúp nén dữ liệu trong ZGC, tiết kiệm bộ nhớ nhiều hơn.
 -XX:ParallelGCThreads=1				# Chỉ định số luồng GC có thể tốt hơn trong một số trường hợp
 -XX:+ZGenerational				#(Zulu 21+ có thể thử) Bật chế độ ZGC thế hệ – hỗ trợ Eden + Old Gen.
+-XX:+ZVerifyViews                		# (debug only, chỉ test dùng) kiểm tra lại vùng nhớ mapping ZGC
+-XX:+UseTransparentHugePages    		# Có thể giúp khi kết hợp với -XX:+UseLargePages
+-XX:+InlineClassNatives				#Cho phép inline native methods phổ biến (nếu có stub).
+
+
+
+
 
 
 🛠️ Tối ưu thời gian hệ & locking
@@ -242,7 +370,7 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 
 🚫 Vô hiệu hóa GC ngoài ý muốn & Graal
 -XX:+DisableExplicitGC 				# Chặn System.gc() từ mod bên thứ 3
--XX:-UseGraalJIT 				# Tắt Graal nếu bạn muốn ép JVM dùng C2 truyền thống
+-XX:+UseGraalJIT 				# Tắt Graal nếu bạn muốn ép JVM dùng C2 truyền thống
 
 📊 Ghi log & theo dõi hiệu năng
 -Xlog:gc*,safepoint:file=gc.log:tags,uptime,time,level 	# Ghi log GC và dừng máy
@@ -253,26 +381,165 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+PerfDisableSharedMem				# Có thể thử nếu không dùng các tool monitoring dùng PerfData
 -XX:+UnlockJavaMonitoringAndManagement
 -XX:+PrintAssembly
--XX:+TraceLinearScanLevel				#Log nội bộ bộ phân register allocator LinearScan.
--XX:+PrintCFGToFile					#Xuất control flow graph để debug JIT code gen.
--XX:+PrintOptoAssembly				#In cả mã máy tối ưu của C2 – cực nặng, nhưng cực kỳ chi tiết.
--XX:+PrintIRWithLIRGraphs			#Nếu test Graal, in IR trung gian.
--XX:+TraceDeoptimization			#Log khi một method bị deoptimize → rất quan trọng nếu có native agent can thiệp
--XX:+LogCompilation				#Output XML file toàn bộ hành vi JIT + compile graph.
--XX:+TraceOSR					#Nếu bạn đang benchmark loop nào bị OSR (On Stack Replacement).
--XX:+PrintInliningDetailed			#Bản chi tiết hơn -XX:+PrintInlining.
+-XX:+TraceLinearScanLevel		 #Log nội bộ bộ phân register allocator LinearScan.
+-XX:+PrintCFGToFile			 #Xuất control flow graph để debug JIT code gen.
+-XX:+PrintOptoAssembly			 #In cả mã máy tối ưu của C2 – cực nặng, nhưng cực kỳ chi tiết.
+-XX:+PrintIRWithLIRGraphs		 #Nếu test Graal, in IR trung gian.
+-XX:+TraceDeoptimization		 #Log khi một method bị deoptimize → rất quan trọng nếu có native agent can thiệp
+-XX:+LogCompilation			 #Output XML file toàn bộ hành vi JIT + compile graph.
+-XX:+TraceOSR				 #Nếu bạn đang benchmark loop nào bị OSR (On Stack Replacement).
+-XX:+PrintInliningDetailed               # In chi tiết toàn bộ các hàm được inline trong JIT (mở rộng hơn -XX:+PrintInlining)
+-XX:+AbortVMOnSafepointTimeout           # JVM sẽ dừng (crash) nếu safepoint bị treo quá lâu (hữu ích khi debug vấn đề treo)
+-XX:+AbortVMOnVMOperationTimeout         # JVM sẽ dừng nếu một thao tác nội bộ (VMOperation) bị timeout (phòng lỗi treo cứng)
+-XX:+CreateCoredumpOnCrash               # Tạo file core dump khi JVM crash (phân tích lỗi native hoặc crash sâu)
+-XX:+DebugNonSafepoints                  # In log chi tiết tại các điểm không phải safepoint (dùng để debug hành vi thread)
+-XX:+DisplayVMOutputToStderr             # Cho phép JVM in log nội bộ ra stderr (hữu ích khi gỡ lỗi)
+-XX:+DisplayVMOutputToStdout             # Cho phép JVM in log nội bộ ra stdout
+-XX:+DumpReplayDataOnError               # Ghi lại dữ liệu biên dịch (JIT replay) khi gặp lỗi để phân tích lại sau
+-XX:+EnableThreadSMRStatistics           # Bật thống kê về Thread Safe Memory Reclamation (SMR), dùng để phân tích hệ thống thread
+-XX:+ExtensiveErrorReports               # Bật chế độ ghi log lỗi nâng cao và đầy đủ hơn khi JVM gặp sự cố
+-XX:+ExitOnOutOfMemoryError              # JVM sẽ thoát ngay khi bị OutOfMemoryError (tránh bị treo không hồi phục)
+-XX:+IgnoreEmptyClassPaths               # Bỏ qua các classpath rỗng trong classpath string
+-XX:+IgnoreUnrecognizedVMOptions         # JVM sẽ không báo lỗi nếu gặp các flag không hợp lệ (dễ test flag mới)
+-XX:+HeapDumpAfterFullGC                 # Tạo heap dump sau khi GC toàn bộ (full GC), phục vụ phân tích memory
+-XX:+HeapDumpBeforeFullGC                # Tạo heap dump trước khi full GC chạy
+-XX:+FlightRecorder                      # Bật Java Flight Recorder để theo dõi hành vi runtime (như profiler tích hợp của JVM)
+-XX:+BootstrapJVMCI                      # Cho phép load trình biên dịch JVMCI khi khởi động JVM (dùng cho GraalVM)
+-XX:+EnableJVMCI                         # Bật compiler interface JVMCI (cho Graal hoặc các JIT khác)
+-XX:+EnableJVMCIProduct                  # Bật các tính năng JVMCI ở môi trường production (tối ưu hiệu năng)
+-XX:+CheckJNICalls                       # Kiểm tra nghiêm ngặt các gọi JNI, giúp phát hiện misuse hoặc lỗi native code
+-XX:+ExecutingUnitTests                  # Đánh dấu JVM đang chạy unit test (dành cho testing nội bộ hoặc CI)
+-XX:+AggressiveHeap                      # Bật chế độ memory aggressive: mở rộng heap tối đa, preload mọi thứ – chỉ nên dùng khi test benchmark
+-XX:+AllowArchivingWithJavaAgent         #Cho phép dump Class Data Sharing(CDS) archive ngay cả khi JVM chạy với Java Agent(JVM chặn để đảm bảo tính ổn định)
+-XX:+AllowRedefinitionToAddDeleteMethods # Cho phép redefine class bằng cách thêm hoặc xóa method – hữu ích với agent hot reload nâng cao (ByteBuddy...
+-XX:+AllowUserSignalHandlers             # Cho phép ứng dụng bắt tín hiệu hệ thống như SIGTERM SIGSEGV-dùng cho debugger profiler hoặc ứng dụng đặc biệt
+-XX:+AutoCreateSharedArchive             # JVM tự tạo CDS archive khi khởi động – tiện lợi nhưng có thể xung đột nếu agent thay đổi hành vi class
+-XX:+AzCRSFailJVMOnError                 # JVM sẽ crash nếu hệ thống AzCRS gặp lỗi (chỉ có trên JVM của Azul – không ảnh hưởng các bản OpenJDK chuẩn)
+-XX:+CompilerDirectivesIgnoreCompileCommands #Bỏ các chỉ thị compile từ file directive dùng khi bạn muốn JVM tự tối ưu mà không bị ép theo config bên ngoài
+-XX:+CIPrintCompileQueue                 # In thông tin hàng chờ JIT compile – hữu ích để debug hiệu suất compile thời gian thực
+-XX:+CIPrintCompilerName                 # In tên compiler (C1/C2) khi biên dịch method – dùng để phân tích hành vi tối ưu JIT
+-XX:+CITime                              # In thời gian biên dịch từng method bởi JIT – dùng để xác định bottleneck compile
+-XX:+DisableAttachMechanism              # Cấm các tool như VisualVM, jcmd... attach vào JVM – tăng bảo mật, tránh bị chèn agent từ bên ngoài
+-XX:+DisablePrimordialThreadGuardPages   # Tắt guard page cho thread đầu tiên – có thể tiết kiệm chút bộ nhớ, nhưng giảm an toàn khi stack overflow
+-XX:+EnableDynamicAgentLoading           #Cho phép load agent trong lúc JVM đang chạy hữu ích cho debug nhưng tiềm ẩn rủi ro bảo mật nếu không kiểm soát
+-XX:+EnableAsyncStackTrace		 #Cho phép thu thập async stack trace (hữu ích khi debug thread hoặc Agent injection như bạn đang làm)
+-XX:+ProfileVM				 #Cho phép JVM tự profile chính mình — hữu ích khi debug bottleneck VM-level.
+-XX:+PauseAtExit			 #Khi bật, JVM sẽ tạm dừng (pause) trước khi thoát (exit) sau khi chương trình kết thúc.
+-XX:+PauseAtStartup			 #Khi bật, JVM sẽ tạm dừng (pause) ngay khi khởi động (startup), trước khi chạy code chính.
+-XX:+PreserveAllAnnotations		 #Bật tính năng giữ lại tất cả annotation trong bytecode trong quá trình biên dịch hoặc xử lý JVM.
+-XX:+PerfDataSaveToFile			 #Bật tính năng lưu dữ liệu PerfData (dữ liệu hiệu năng JVM) vào file khi JVM kết thúc.
+-XX:+PreferInterpreterNativeStubs	 #Bật tùy chọn để JVM ưu tiên sử dụng các native stubs dành cho interpreter 
+-XX:+PrintAdapterHandlers		 #In ra thông tin chi tiết về các adapter handler được JVM tạo ra để nối (bridge) giữa các phần code khác nhau 
+-XX:+PrintClassHistogram		#In thống kê số lượng object theo class đang tồn tại trong heap.
+-XX:+PrintCodeCache			#In thông tin tổng quan về bộ nhớ code cache – nơi lưu trữ JIT-compiled code.
+-XX:+PrintCodeCacheOnCompilation	# Mỗi lần biên dịch JIT, in thêm thông tin về CodeCache.
+-XX:+PrintCodeHeapAnalytics		#In phân tích chi tiết về từng heap trong CodeCache (non-profiled, profiled, non-method...).
+-XX:+PrintCommandLineFlags		# In ra tất cả các flag JVM được set khi khởi động (bao gồm mặc định, user-defined và ergonomic).
+-XX:+PrintCompilation2			#Mở rộng thêm chi tiết so với PrintCompilation, như call site, method caller/callee.
+-XX:+PrintConcurrentLocks		#In tất cả các lock đang được giữ bởi từng thread trong quá trình thread dump.
+-XX:+PrintExtendedThreadInfo		#Mở rộng thông tin về thread khi tạo thread dump (jstack, jcmd Thread.print), bao gồm locks, CPU time, v.v.
+-XX:+PrintFlagsInitial			#In toàn bộ flag cùng giá trị khởi đầu
+-XX:+PrintFlagsRanges			#In phạm vi hợp lệ (range) của từng flag
+-XX:+PrintVMOptions			#In danh sách VM options đang dùng
+-XX:+PrintGC				#In log GC đơn giản (nội dung mỗi lần GC)
+-XX:+PrintGCDetails			#In log GC chi tiết hơn
+-XX:+PrintHeapAtSIGBREAK		#In thông tin heap khi nhấn Ctrl+\ (hoặc gửi SIGBREAK)
+-XX:+PrintInlining			#In thông tin inline của JIT C2
+-XX:+PrintInterpreter			#In thông tin interpreter loop
+-XX:+PrintIntrinsics			#In danh sách intrinsic được dùng
+-XX:+PrintMethodData			#In dữ liệu profiling method (trước khi JIT)
+-XX:+PrintOptoAssembly			#In asm sau khi tối ưu (JIT C2)
+-XX:+PrintNMethods			#In danh sách method được JIT hóa
+-XX:+StressIncrementalInlining		#Tăng độ che phủ kiểm thử (stress test) để đảm bảo rằng incremental inlining hoạt động đúng trong các điều kiện phức tạp.
+-XX:+TraceSpilling			#In ra log chi tiết về các quyết định liên quan đến spilling register trong quá trình biên dịch tối ưu với C2.
+-XX:AllocatePrefetchLines=1		#Số dòng cache được prefetch sau mỗi cấp phát object.
+-XX:AllocatePrefetchStyle=1		#Cách prefetch: 0 = tắt, 1 = sau mỗi cấp phát, 2 = thông minh hơn dựa trên TLAB.
+-XX:+UseXMMForObjInit			#Khi bật true, có thể giúp cải thiện hiệu suất trong ứng dụng Java tạo nhiều object ngắn sống
+-XX:+TrapBasedNullChecks		# Có thể giúp tăng hiệu năng trong C2, giảm branch.
+-XX:+TrapBasedRangeChecks		#Nhạy cảm hơn vì dễ crash nếu có lỗi logic (ví dụ JNI hoặc C++ viết sai).
+-XX:+DisableAttachMechanism
+-XX:-RelaxAccessControlCheck		#Tránh JVM nới lỏng check access field/method → tăng bảo mật, giảm xử lý meta
+-XX:-DebugNonSafepoints 		#Gỡ profiling từng vị trí trong method → nhẹ hơn
+-XX:-AllowUserSignalHandlers 		#Giảm chi phí signal dispatch, tăng hiệu suất long-run
+-XX:-TraceClassLoading
+-XX:-TraceClassUnloading		#Không log class load/unload
+-XX:+OptoBundling                       #(tăng hiệu suất JIT loop bundles)
+-XX:+OptoScheduling                     #(tối ưu lệnh máy)
+
+
+
+
+
 
 
 ⚙️ Fix & config các lỗi Minecraft mod
--Dfml.ignoreInvalidMinecraftCertificates=true 			# Forge fix lỗi chứng chỉ
--Dfml.ignorePatchDiscrepancies=true 				# Bỏ qua chênh lệch patch Forge
--Djava.net.preferIPv4Stack=true 				# Dùng IPv4 thay IPv6 (ổn định hơn)
--XX:-EnableDynamicAgentLoading 					# Tắt cho phép agent runtime nếu không cần
--javaagent:D:\Agent\multicpu_agent.jar 				# Agent đa luồng tùy biến bạn viết
--Djava.util.concurrent.ForkJoinPool.common.parallelism=72	#Tối ưu parallelism nếu modpack dùng ForkJoin
--Dio.netty.recycler.maxCapacityPerThread=0			#Tắt cache Netty nếu bị memory leak do mod network
--Dgraal.ExplicitUnsafe=true					#Tối ưu truy cập Unsafe, khi viết mod hoặc agent native.
--Dgraal.CompileThreads=24					#Tối ưu thread biên dịch cho GraalVM nếu có thử.
+-Dfml.ignoreInvalidMinecraftCertificates=true 				# Forge fix lỗi chứng chỉ
+-Dfml.ignorePatchDiscrepancies=true 					# Bỏ qua chênh lệch patch Forge
+-Djava.net.preferIPv4Stack=true 					# Dùng IPv4 thay IPv6 (ổn định hơn)
+-XX:+EnableDynamicAgentLoading 						# Tắt cho phép agent runtime nếu không cần
+-javaagent:D:\Agent\multicpu_agent.jar 					# Agent đa luồng tùy biến bạn viết
+-Djava.util.concurrent.ForkJoinPool.common.parallelism=72		#Tối ưu parallelism nếu modpack dùng ForkJoin
+-Dio.netty.recycler.maxCapacityPerThread=0				#Tắt cache Netty nếu bị memory leak do mod network
+-Dgraal.ExplicitUnsafe=true						#Tối ưu truy cập Unsafe, khi viết mod hoặc agent native.
+-Dgraal.CompileThreads=24						#Tối ưu thread biên dịch cho GraalVM nếu có thử.
+-Dforge.logging.file.level=OFF						#Tự redirect console log (nếu không cần ghi file)
+-Dforge.logging.console.level=WARN -Dforge.logging.markers=false	#Chỉ còn log từ WARN, ERROR, FATAL được hiển thị → INFO bị ẩn.
+-Dfml.networkconnection.maxpacketsize=31457280
+-Dfml.readTimeout=120
+-Dfml.queryResultTimeout=120
+
+
+
+🔢 CÁC JVM FLAG CÓ GIÁ TRỊ SỐ
+➕ Viết dạng -XX:<Flag>=<value>
+-XX:AVX3Threshold=4096                    	# Ngưỡng tối thiểu (byte) để JIT kích hoạt AVX-512 SIMD, nên giảm nếu CPU hỗ trợ tốt
+-XX:AbortVMOnVMOperationTimeoutDelay=1000 	# Thời gian tối đa (ms) cho 1 VM operation trước khi JVM crash (nếu bật AbortVMOnVMOperationTimeout)
+-XX:ActiveProcessorCount=72              	# Số lượng luồng logic JVM sử dụng (72 threads), phù hợp máy nhiều nhân
+-XX:AdaptiveSizeDecrementScaleFactor=4   	# Thông số điều chỉnh tốc độ thu nhỏ heap trong GC adapt
+-XX:AdaptiveSizeMajorGCDecayTimeScale=10 	# Tốc độ làm mượt tính toán GC major size, ảnh hưởng tính adapt
+-XX:AllocateInstancePrefetchLines=1      	# Số cache line sẽ prefetch khi new object, giúp tăng tốc cấp phát
+-XX:AllocatePrefetchDistance=256         	# Khoảng cách prefetch (byte) giữa prefetch và điểm truy cập thật, tối ưu CPU cache
+-XX:AllocatePrefetchLines=3              	# Bao nhiêu dòng cache nên prefetch trước, tăng hiệu năng memory access
+-XX:AllocatePrefetchStepSize=4           	# Bước nhảy giữa các prefetch line, kết hợp cùng các flag trên
+-XX:ArchiveRelocationMode=1              	# Chế độ di chuyển archive vùng CDS, 1 = dynamic mode
+-XX:ArrayCopyLoadStoreMaxElem=8          	# Giới hạn phần tử khi sao chép mảng bằng intrinsic load/store, tránh JIT sinh code quá lớn
+-XX:AsyncDeflationInterval=250           	# Khoảng thời gian kiểm tra deflation monitor (ms), ảnh hưởng đến lock management
+-XX:AsyncLogBufferSize=2097152           	# Kích thước bộ đệm log async, 2MB, tăng sẽ tránh mất log trong ứng dụng nhiều luồng
+-XX:AutoBoxCacheMax=128                  	# Giới hạn cache cho Integer.valueOf,Long.valueOf thường để mặc định hoặc tăng nhẹ nếu dùng nhiều boxing
+-XX:AvgMonitorsPerThreadEstimate=1024    	# Ước lượng số lượng lock monitor mỗi thread, ảnh hưởng pre-alloc
+-XX:CICompilerCount=36                   	# Số luồng JIT compiler (C2), giúp compile nhanh hơn trên CPU nhiều nhân
+-XX:CodeCacheExpansionSize=65536         	# Khi code cache đầy, JVM sẽ mở rộng thêm bao nhiêu byte (64KB), ảnh hưởng đến JIT stability
+-XX:CompileThreshold=1500                	# Số lần method được gọi trước khi JIT compile (giảm = compile sớm hơn, tăng = compile trễ hơn)
+-XX:CompilerThreadPriority=-1            	# Ưu tiên luồng JIT compile (Linux: -1 là ưu tiên thấp)
+-XX:CompilerDirectivesLimit=50           	# Số lượng chỉ thị directive tối đa mà JIT sử dụng
+-XX:EliminateAllocationArraySizeLimit=64 	# Giới hạn kích thước array mà JVM có thể phân tích để bỏ cấp phát object
+-XX:EliminateAllocationFieldsLimit=512   	# Giới hạn số trường của object để loại bỏ cấp phát, ảnh hưởng escape analysis
+-XX:EpsilonMaxTLABSize=4194304           	# Giới hạn TLAB (thread-local allocation buffer) trong GC Epsilon, 4MB
+-XX:EpsilonMinHeapExpand=134217728       	# Ngưỡng để mở rộng heap trong Epsilon GC, 128MB
+-XX:EpsilonTLABDecayTime=1000            	# Thời gian decay để điều chỉnh TLAB allocation, 1 giây
+-XX:EpsilonUpdateCountersStep=1048576    	# Cứ mỗi 1MB cấp phát, GC Epsilon update thống kê heap
+-XX:ErrorLogTimeout=120                  	# Giữ JVM tạm ngừng tối đa 120 giây để ghi log lỗi nếu có lỗi nghiêm trọng
+-XX:EscapeAnalysisTimeout=20             	# Thời gian tối đa (ms) để thực hiện Escape Analysis (dùng cho phân tích bỏ cấp phát)
+-XX:G1ConcMarkStepDurationMillis=10      	# Giới hạn thời gian cho mỗi bước concurrent mark trong G1GC (ms)
+-XX:G1PeriodicGCSystemLoadThreshold=0.0  	# Ngưỡng CPU load để G1GC quyết định chạy periodic GC (0 = luôn chạy nếu cần)
+-XX:G1RebuildRemSetChunkSize=262144      	# Kích thước mỗi chunk khi rebuild remembered set (GC metadata)
+-XX:HeapBaseMinAddress=2147483648        	# Địa chỉ base của heap tối thiểu, hỗ trợ NUMA và randomization tốt hơn (2GB)
+-XX:HeapSizePerGCThread=43620760         	# Heap được chia đều cho mỗi luồng GC (~41.6MB mỗi thread)
+-XX:InitialHeapSize=536870912            	# Kích thước heap khởi tạo, 512MB
+-XX:LargePageSizeInBytes=2097152         	# Kích thước trang bộ nhớ lớn (huge pages), 2MB – chỉ dùng nếu hệ điều hành hỗ trợ
+-XX:LoopMaxUnroll=32                     	# Số vòng lặp tối đa JVM cho phép "mở vòng" (unroll) trong compile
+-XX:LoopUnrollLimit=256                  	# Kích thước loop đủ nhỏ sẽ được unroll để tăng hiệu năng
+-XX:MaxInlineLevel=15                    	# Số cấp độ call stack mà JVM cho phép inline, càng cao càng tối ưu nhưng tốn code cache
+-XX:MaxRAM=137438953472                  	# Giới hạn RAM tối đa JVM có thể dùng (128GB)
+-XX:MaxRAMPercentage=25.0                	# JVM dùng tối đa 25% tổng RAM nếu không chỉ định Xmx
+-XX:MinHeapSize=536870912                	# Heap nhỏ nhất JVM được phép giảm xuống (512MB)
+-XX:ReservedCodeCacheSize=536870912      	# Kích thước vùng cache code của JIT (512MB), ảnh hưởng tốc độ compile và inline
+-XX:MaxInlineSize=100               	        # Tăng size tối đa của method để được inline (mặc định 35)
+-XX:FreqInlineSize=325                    	# Tăng size tối đa cho method gọi thường xuyên để inline
+-XX:InlineFrequencyCount=10000            	# Mức gọi tối thiểu để xem là "frequent" (tăng để hỗ trợ FreqInline)
+-XX:MaxRecursiveInlineLevel=3			#Cho phép inline đệ quy tối đa (default 1 hoặc 2)
+
+
 
 
 
@@ -289,7 +556,12 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -Xcomp 					#Compile toàn bộ code, không dùng interpreter (benchmark hotpath).
 -Xverify:none 				#Tắt bytecode verifier → giảm startup time.
 -XX:+UseStringLatin1 			#Dùng compact String UTF8-Latin1 (giảm RAM nếu chuỗi không có ký tự Unicode cao).
-
+-Dsun.java2d.opengl=true		#Giúp Minecraft ưu tiên OpenGL hơn D3D khi JVM xử lý hình ảnh.
+-Dsun.java2d.d3d=false			#Giúp Minecraft ưu tiên OpenGL hơn D3D khi JVM xử lý hình ảnh.
+-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=false
+-Dorg.lwjgl.system.allocator=jemalloc
+-Diris.use-vbo=true
+-Diris.shader-full-res=true
 
 
 
@@ -300,6 +572,10 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 -XX:+UseVTune                           # (Intel VTune integration)
 -XX:+UseG1GC                            # Dùng GC mới hơn ZGC
 -XX:+UseBiasedLocking                   # Biased lock (đã bị xóa khỏi JDK 17+)
+-XX:+UseLegacyInlining			#Dùng hệ thống inline cũ thay vì mới — đôi khi tương thích hơn với code injection hoặc agent inline sâu
+-XX:-UseGCOverheadLimit			#JVM thường kill nếu GC chiếm quá 98% CPU → tắt để không kill quá sớm trong build-heavy modpack
+-XX:-VerifyOops				#Bỏ kiểm tra tham chiếu object → tăng tốc lookup, rất nguy hiểm nếu mod lỗi
+
 
 ⚙️ 1. Flag Hiếm Cực Độ – Thường không có trong PrintFlagsFinal
 -XX:+UseFastEmptyMethods		#Tăng tốc các method trống (rất nhẹ, nhưng có lợi nếu mod có nhiều stub/trampoline method).
@@ -313,16 +589,189 @@ Khi test: bạn có thể thêm -XX:+PrintFlagsFinal để kiểm tra giá trị
 
 
 📦 Bộ nhớ tối đa JVM
--Xmx151G 					# Cấp tối đa bộ nhớ heap (tương thích ZGC + LargePage)
+-Xmx160G 					# Cấp tối đa bộ nhớ heap (tương thích ZGC + LargePage)
+
+
+🛠 Gợi ý nâng cao (nếu bạn cực hardcore):
+-XX:-SafepointTimeout 			#để tắt giới hạn max safepoint wait.
+-XX:-UseGCStartUpDiagnostics 		#nếu không cần phân tích GC khởi đầu.
+-XX:-SegmentedCodeCache 		#(OpenJDK 21+) để giữ codecache 1 vùng — ít phân mảnh hơn.
+-XX:-RelaxAccessControlCheck		#Gỡ check quyền truy cập nội bộ class – nhẹ hơn
+-XX:+ScavengeBeforeFullGC		#Thêm dọn Eden trước full GC (có thể ổn định RAM spike)
+-XX:-ProfileVM				#Tắt profiling của chính JVM
+
+
+🧠 Nhóm -Djdk.*: Tối ưu Thread / Vector API / JDK behavior
+-Djdk.virtualThreadScheduler.parallelism=72	#Ép mức độ song song cho VirtualThreadScheduler (ảnh hưởng chunkload async nếu dùng virtual threads như C2ME)
+-Djdk.tracePinnedThreads=full			#Dùng để debug, xem luồng nào bị "pinned" khiến GC không tối ưu
+-Djdk.gtk.version=2				#Chạy Minecraft với GTK2 trên Linux (tránh crash GPU driver)
+-Djdk.nio.maxCachedBufferSize=262144		#Giới hạn size buffer cached trong NIO (ổn định memory hơn)
+
+🧮 Nhóm -Dorg.lwjgl.*: Tối ưu bộ engine đồ họa (LWJGL)
+-Dorg.lwjgl.system.allocator=jemalloc			#Dùng jemalloc cho LWJGL → giảm phân mảnh bộ nhớ
+-Dorg.lwjgl.opengl.Display.enableHighDPI=true		#Bật DPI cao (giúp rõ hơn, nhất là 2K/4K)
+-Dorg.lwjgl.util.Debug=true				#Bật debug LWJGL (không nên dùng khi chơi, chỉ để trace lỗi)
+-Dorg.lwjgl.util.NoChecks=true				#Tắt check an toàn trong LWJGL → tăng nhẹ hiệu suất
+
+🧱 Nhóm -Dsodium.*, -Dfabric.*: Mod-specific (nếu bạn dùng Sodium/Fabric)
+-Dsodium.useNioBuffers=true				#(không chính thức) thử ép Sodium dùng NIO buffer, có thể cải thiện mesh build hiệu suất
+-Dsodium.vertex-cache-size=1048576			#(tùy bản Sodium) ép cache size cho mesh vertex (tăng FPS scene lớn)
+-Dfabric.log.disableAnsi=false				#Cho phép log có màu (nếu bị vô hiệu hóa do console)
+
+💾 Nhóm -Djava.*: Tối ưu heap, GC, classload
+-Djava.awt.headless=true				#Tắt UI của AWT nếu không cần dùng (chạy server hoặc headless client)
+-Djava.locale.providers=COMPAT				#Tránh lỗi locale trên một số bản Java hoặc quốc tế hóa
+-Djava.security.egd=file:/dev/urandom			#Tăng tốc khởi động bằng cách cải thiện entropy source trên Linux
+-Djava.net.preferIPv4Stack=true				#Tránh lỗi mạng khi Minecraft bị IPv6 gây bug
+
+
+
+🚀 Nhóm -Dcom.sun.*: Gắn sâu với JDK
+-Dcom.sun.management.jmxremote				#Bật theo dõi GC, memory runtime (debug server Minecraft)
+-Dcom.sun.management.gcNotification=true		#Bật GC notification events (nếu bạn theo dõi GC log)
+-Dio.netty.allocator.useCacheForAllThreads=true
+-Dio.netty.threadLocalDirectBufferSize=65536
+-Dio.netty.leakDetection.level=disabled
+
+-Dio.netty.allocator.type=pooled				# Tối ưu DirectBuffer & Pool
+-Dio.netty.allocator.useCacheForAllThreads=true
+-Dio.netty.threadLocalDirectBufferSize=65536
+
+-Dio.netty.threadLocalMap.stringBuilder.initialSize=2048	# Tăng kích thước StringBuilder & char buffer cache
+-Dio.netty.threadLocalMap.stringBuilder.maxSize=8192
+-Dio.netty.maxThreadLocalCharBufferSize=32768
+
+-Dio.netty.buffer.checkAccessible=false				# Tắt các check nếu chắc chắn không lỗi
+-Dio.netty.buffer.checkBounds=false
+
+-Dio.netty.leakDetection.level=disabled				# Tắt leak detector (nếu không cần debug)
+
+
+-Dio.netty.buffer.checkAccessible=false
+-Dio.netty.buffer.checkBounds=false
+
+
+
+| Flag                                  | Mặc định | Gợi ý tối ưu với ZGC + RAM 160G + 600 mods                            |
+| ------------------------------------- | -------- | --------------------------------------------------------------------- |
+| `AdaptiveSizeDecrementScaleFactor`    | `4`      | ✅ Giữ                                                                 |
+| `AdaptiveSizePolicyInitializingSteps` | `20`     | 🔼 **Tăng lên 64** → ZGC thích khởi động mềm mại hơn                  |
+| `AdaptiveSizePolicyWeight`            | `10`     | 🔼 **Tăng lên 20\~30** để phản ứng GC "mượt" hơn với modload dao động |
+| `AdaptiveSizeThroughPutPolicy`        | `0`      | ✅ Giữ                                                                 |
+| `AdaptiveTimeWeight`                  | `25`     | 🔼 **Tăng lên 40** để ưu tiên throughput hơn khi có spike             |
+
+
+✅ Flags mới nên thêm để tăng FPS:
+-XX:AllocateInstancePrefetchLines=4
+-XX:AllocatePrefetchInstr=1
+-XX:AllocatePrefetchLines=4
+-XX:AllocatePrefetchStepSize=8
+-XX:ArrayCopyLoadStoreMaxElem=16
+-XX:ArrayOperationPartialInlineSize=64
+-XX:AutoBoxCacheMax=1024
+-XX:AvgMonitorsPerThreadEstimate=2048
+
+🎯 Tổng kết flag điều chỉnh lần này:
+-XX:C1InlineStackLimit=15
+-XX:C1MaxInlineLevel=15
+-XX:C1MaxInlineSize=64
+-XX:C1MaxRecursiveInlineLevel=3
+-XX:C1MaxTrivialSize=12
+-XX:CompileThreshold=1000
+-XX:CompilerThreadPriority=1
+-XX:-DebugInlinedCalls
+-XX:-DelayCompilerStubsGeneration
+-XX:+DisablePrimordialThreadGuardPages
+-XX:-DontCompileHugeMethods
+-XX:+DontYieldALot
+-XX:EliminateAllocationArraySizeLimit=128
+-XX:EliminateAllocationFieldsLimit=1024
+-XX:EscapeAnalysisTimeout=100.0
+-XX:ErrorLogPrintCodeLimit=0
+-XX:+ExplicitGCInvokesConcurrent
+
+
+
+✅ Gợi ý điều chỉnh cho G1GC (được ZGC hỗ trợ fallback khi cần):
+Flag	Gợi ý	Giải thích
+G1ConcRefinementThreads	12			🔼 Tăng số thread tinh chỉnh remembered set → ổn định GC time
+G1HeapRegionSize	8m hoặc 16m		✅ Giảm số vùng → tăng tốc scan vùng heap lớn (bạn có 160GB RAM)
+G1ReservePercent	5			🔽 Giảm buffer vùng dự phòng nếu RAM rất lớn
+G1NewSizePercent	15			🔼 Cho phép vùng young lớn hơn → ít minor GC hơn
+G1MaxNewSizePercent	40			🔽 Tránh young quá to → không đủ vùng cho old
+G1MixedGCLiveThresholdPercent	93		🔼 Chỉ collect vùng old thực sự cần, giúp giảm pause
+G1SATBBufferSize	2048			🔼 Đủ buffer để tránh block khi chạy nhiều luồng
+G1SATBBufferEnqueueingThresholdPercent	80	🔼 Giảm số lần pause do full queue
+G1RSetUpdatingPauseTimePercent	5		🔽 Cân bằng giữa update RSet và pause GC
+G1PeriodicGCInterval	600000			✅ Mỗi 10 phút → giúp cleanup khi idle
+G1UseReferencePrecleaning	false		🔽 Không cần nếu bạn ưu tiên throughput thay vì reclaim nhanh
+GCTimeLimit	90				🔽 Giảm để giữ thời gian GC ổn định
+GCTimeRatio	80				🔽 Cho phép JVM dùng 20% thời gian cho GC nếu cần
+G1ConcMarkStepDurationMillis	4.0		🔽 Để chia nhỏ công việc background GC, tránh ảnh hưởng FPS
+G1ExpandByPercentOfAvailable	40		🔼 Tăng tốc heap expansion khi cần thiết
+G1OldCSetRegionThresholdPercent	25		🔼 Để mixed GC gom dọn nhiều vùng hơn
+HeapBaseMinAddress	4096m			🧠 Một số mod nặng allocate object nhiều, dịch vùng base xa sẽ ổn định hơn
+
+
+
+
+-XX:-IntelJccErratumMitigation
+-XX:LoopOptsCount=50
+-XX:LoopPercentProfileLimit=5
+-XX:LiveNodeCountInliningCutoff=60000
+-XX:-LogEvents
+-XX:LoopStripMiningIterShortLoop=5
+-XX:MaxInlineSize=150
+-XX:LoopUnrollMin=2
+-XX:MaxVectorSize=64
+-XX:MetaspaceSize=268435456
+-XX:MinRAMPercentage=5.0
+-XX:+UseNUMA
+-XX:+UseLargePages
+
+
 
 
 ✅ Mẫu gợi  tôi  kiểm tra chơi tải chunk mượt
 Tôi dùng Zulu 21.42.19 (21.0.7)
 OS: WIndows 11 Pro for Workstation
 Progressor 2xE5 2699v3(Unlock Turbo)
-Ram: 160GB DDR4 32Gb ECC (3x 2DRx4 and 2x 4Rx4) Skhynix 
+Ram: 160GB DDR4 32Gb ECC Skhynix 
 GTX 1660
 PSU VSP 1000W 
 
--Xmx151G -XX:+UnlockExperimentalVMOptions --add-modules jdk.incubator.vector -XX:+UseAllWindowsProcessorGroups -XX:ActiveProcessorCount=72 -Djdk.virtualThreadScheduler.parallelism=72 -XX:CICompilerCount=36 -XX:+TieredCompilation -XX:MaxInlineLevel=15 -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+EnableVectorAggressiveReboxing -XX:+UseTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseAES -XX:UseSSE=4 -XX:+UseZGC -XX:ZUncommitDelay=10000 -XX:ZCollectionInterval=128 -XX:+ZProactive -XX:+UseStringDeduplication -XX:SoftMaxHeapSize=140G -XX:+UseFastUnorderedTimeStamps -XX:LockingMode=0 -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC -XX:-UseGraalJIT -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:-EnableDynamicAgentLoading -XX:+UseNUMA -XX:+UseNUMAInterleaving -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseCountedLoopSafepoints -XX:+ResizeTLAB -Dsun.zip.disableMemoryMapping=true -Djdk.io.File.enableADS=false -XX:+UseThreadPriorities -Dprism.vsync=false -XX:ThreadPriorityPolicy=1 -XX:CompileThreshold=1500 --enable-preview -XX:+UnlockDiagnosticVMOptions -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+OptimizeStringConcat -XX:InlineSmallCode=900 -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+UseSHA -XX:+UseCRC32Intrinsics -XX:+UsePopCountInstruction -XX:UseAVX=2 -XX:+EliminateLocks -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSHA256Intrinsics -XX:+UseSSE42Intrinsics -XX:+UseSHA512Intrinsics -XX:AllocatePrefetchDistance=256 -XX:+PreserveFramePointer -XX:LoopMaxUnroll=32 -XX:AllocatePrefetchLines=3 -XX:AllocatePrefetchStepSize=4 -XX:+UseCondCardMark -XX:+UseSuperWord -XX:+UseCMoveUnconditionally -XX:+UseUnalignedAccesses -XX:+UseVectorCmov -XX:+UseLargePagesIndividualAllocation -XX:+UseCodeCacheFlushing -XX:+EnableContended -XX:-RestrictContended -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:LoopUnrollLimit=256 -XX:+UseFastJNIAccessors -XX:+AlwaysActAsServerClassMachine -XX:+UseAdaptiveNUMAChunkSizing -XX:TLABSize=712k -XX:ReservedCodeCacheSize=512m -XX:+UseXmmI2F -XX:+UseXmmRegToRegMoveAll -XX:+ZGenerational -Xverify:none -XX:+UseXmmLoadAndClearUpper -XX:+UseCLMUL -XX:+UseCountLeadingZerosInstruction -XX:+UseCountTrailingZerosInstruction -XX:+UseOnlyInlinedBimorphic -XX:+UseDynamicNumberOfCompilerThreads -XX:+UseLoopInvariantCodeMotion
+
+
+Old
+-Xmx160G -XX:+UnlockExperimentalVMOptions -XX:+UseXMMForObjInit -XX:+UseZGC -XX:-UseShenandoahGC -XX:-UseSerialGC -XX:-UseG1GC -XX:-UseParallelGC -XX:+ShenandoahUncommit -XX:+EnableJVMCI -XX:+EnableJVMCIProduct -XX:ShenandoahUncommitDelay=10000 -Xshare:off --add-modules jdk.incubator.vector -XX:+UseAllWindowsProcessorGroups -XX:ActiveProcessorCount=72 -Djdk.virtualThreadScheduler.parallelism=72 -XX:CICompilerCount=36 -XX:+TieredCompilation -XX:MaxInlineLevel=30 -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+EnableVectorAggressiveReboxing -XX:+UseTLAB -XX:-AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseAES -XX:UseSSE=4 -XX:ZUncommitDelay=5000 -XX:ZCollectionInterval=3 -XX:+ZProactive -XX:+UseStringDeduplication -XX:+UseFastUnorderedTimeStamps -XX:LockingMode=0 -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:+EnableDynamicAgentLoading -XX:+UseNUMA -XX:+UseNUMAInterleaving -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+UseFPUForSpilling -XX:-UseFastStosb -XX:+UseCountedLoopSafepoints -XX:+ResizeTLAB -Dsun.zip.disableMemoryMapping=true -Djdk.io.File.enableADS=false -XX:+UseThreadPriorities -Dprism.vsync=false -XX:ThreadPriorityPolicy=1 --enable-preview -XX:+UnlockDiagnosticVMOptions -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+OptimizeStringConcat -XX:InlineSmallCode=1500 -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+UseSHA -XX:+UseCRC32Intrinsics -XX:+UsePopCountInstruction -XX:UseAVX=2 -XX:+EliminateLocks -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSHA256Intrinsics -XX:+UseSSE42Intrinsics -XX:+UseSHA512Intrinsics -XX:AllocatePrefetchDistance=256 -XX:+PreserveFramePointer -XX:LoopMaxUnroll=32 -XX:AllocatePrefetchLines=3 -XX:AllocatePrefetchStepSize=4 -XX:+UseCondCardMark -XX:+UseSuperWord -XX:+UseCMoveUnconditionally -XX:+UseUnalignedAccesses -XX:+UseVectorCmov -XX:+UseCodeCacheFlushing -XX:+EnableContended -XX:+RestrictContended -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:LoopUnrollLimit=32 -XX:+UseFastJNIAccessors -XX:+AlwaysActAsServerClassMachine -XX:+UseAdaptiveNUMAChunkSizing -XX:ReservedCodeCacheSize=1024m -XX:+UseXmmI2F -XX:+UseXmmRegToRegMoveAll -XX:+ZGenerational -Xverify:none -XX:+UseCLMUL -XX:+UseCountLeadingZerosInstruction -XX:+UseCountTrailingZerosInstruction -XX:+UseOnlyInlinedBimorphic -XX:-UseDynamicNumberOfCompilerThreads -XX:+UseLoopInvariantCodeMotion -Djdk.nio.maxCachedBufferSize=1048576 -XX:+TrustFinalNonStaticFields -XX:+CompactStrings -XX:+AlignVector -XX:+AlwaysCompileLoopMethods -XX:+AlwaysPreTouchStacks -XX:-AlwaysTenure -XX:+ExpandSubTypeCheckAtParseTime -XX:+ForceTimeHighResolution -XX:+AllowParallelDefineClass -XX:+UseXmmI2D -XX:+UsePoly1305Intrinsics -XX:+UseStoreImmI16 -XX:+OptoScheduling -XX:+OverrideVMProperties -XX:+PerfBypassFileSystemCheck -XX:+PreferInterpreterNativeStubs -XX:+OptoBundling -Dmixin.dumpTargetOnFailure=true -XX:NUMAChunkResizeWeight=35 -XX:+UseCriticalJavaThreadPriority -XX:FreqInlineSize=450 -XX:MaxRecursiveInlineLevel=5 -XX:+UseInlineCaches -Dfml.networkconnection.maxpacketsize=31457280 -Dfml.readTimeout=120 -Dfml.queryResultTimeout=120 -XX:LoopStripMiningIter=100 -XX:+Inline -XX:AllocatePrefetchStyle=2 -XX:AllocatePrefetchLines=2 -XX:+TrapBasedNullChecks -XX:+UseProfiledLoopPredicate -XX:+UseJumpTables -XX:+DisableAttachMechanism -XX:+TrapBasedRangeChecks -XX:+UsePerfData -XX:-RelaxAccessControlCheck -XX:-UseGCOverheadLimit -XX:-DebugNonSafepoints -XX:-AllowUserSignalHandlers -XX:-SafepointTimeout -Dsun.java2d.opengl=true -Dsun.java2d.d3d=false -XX:+UseUnalignedLoadStores -XX:+DoEscapeAnalysis -XX:ContendedPaddingWidth=256 -Dsun.nio.MaxDirectMemorySize=32G -XX:MaxDirectMemorySize=32G -Dorg.lwjgl.system.allocator=jemalloc -Diris.use-vbo=true -Djdk.nio.maxCachedBufferSize=262144 -Dorg.lwjgl.util.NoChecks=true -Djava.net.preferIPv4Stack=true -Dsodium.useNioBuffers=true -Dio.netty.buffer.checkAccessible=false -Dio.netty.buffer.checkBounds=false -Dio.netty.threadLocalDirectBufferSize=65536 -Dio.netty.leakDetection.level=disabled -Dio.netty.allocator.useCacheForAllThreads=true -Dio.netty.threadLocalMap.stringBuilder.initialSize=2048 -Dio.netty.threadLocalMap.stringBuilder.maxSize=8192 -Dio.netty.maxThreadLocalCharBufferSize=32768 -XX:+InlineClassNatives -XX:+ScavengeBeforeFullGC -Dc2me.useRegionScheduler=true -XX:AdaptiveSizePolicyInitializingSteps=64 -XX:AdaptiveSizePolicyWeight=25 -XX:AdaptiveTimeWeight=40 -XX:AllocateInstancePrefetchLines=4 -XX:AllocatePrefetchInstr=1 -XX:AllocatePrefetchLines=4 -XX:AllocatePrefetchStepSize=8 -XX:ArrayCopyLoadStoreMaxElem=16 -XX:ArrayOperationPartialInlineSize=64 -XX:AutoBoxCacheMax=1024 -XX:AvgMonitorsPerThreadEstimate=2048 -XX:C1InlineStackLimit=15 -XX:C1MaxInlineLevel=15 -XX:C1MaxInlineSize=64 -XX:C1MaxRecursiveInlineLevel=3 -XX:C1MaxTrivialSize=12 -XX:CompileThreshold=100 -XX:CompilerThreadPriority=0 -XX:-DebugInlinedCalls -XX:-DelayCompilerStubsGeneration -XX:+DisablePrimordialThreadGuardPages -XX:-DontCompileHugeMethods -XX:+DontYieldALot -XX:EliminateAllocationArraySizeLimit=128 -XX:EliminateAllocationFieldsLimit=1024 -XX:EscapeAnalysisTimeout=100.0 -XX:ErrorLogPrintCodeLimit=0 -XX:+ExplicitGCInvokesConcurrent -XX:G1ConcRefinementThreads=12 -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=5 -XX:G1NewSizePercent=15 -XX:G1MaxNewSizePercent=40 -XX:G1MixedGCLiveThresholdPercent=93 -XX:G1SATBBufferSize=2048 -XX:G1SATBBufferEnqueueingThresholdPercent=80 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:G1PeriodicGCInterval=600000 -XX:+G1PeriodicGCInvokesConcurrent -XX:-G1UseReferencePrecleaning -XX:GCTimeLimit=90 -XX:GCTimeRatio=80 -XX:G1ConcMarkStepDurationMillis=4.0 -XX:G1ExpandByPercentOfAvailable=40 -XX:G1OldCSetRegionThresholdPercent=25 -XX:HeapBaseMinAddress=4294967296 -XX:-IntelJccErratumMitigation -XX:LoopOptsCount=43 -XX:LoopPercentProfileLimit=10 -XX:LiveNodeCountInliningCutoff=60000 -XX:-LogEvents -XX:LoopStripMiningIterShortLoop=5 -XX:MaxInlineSize=400 -XX:LoopUnrollMin=2 -XX:MaxVectorSize=64 -XX:MetaspaceSize=268435456 -XX:MinRAMPercentage=5.0 -XX:TieredStopAtLevel=4 -XX:+BackgroundCompilation -XX:OnStackReplacePercentage=140 -XX:+InlineSynchronizedMethods -XX:ZMarkStackSpaceLimit=2G
+
+
+
+
+
+
+GraavlVM
+-XX:+UnlockExperimentalVMOptions -XX:-UseZGC -XX:+UseSerialGC -XX:-UseShenandoahGC -XX:-UseG1GC -XX:-UseParallelGC -XX:+EnableJVMCI -XX:+EnableJVMCIProduct -Xshare:off --add-modules jdk.incubator.vector -XX:ActiveProcessorCount=72 -Djdk.virtualThreadScheduler.parallelism=72 -XX:CICompilerCount=36 -XX:+TieredCompilation -XX:MaxInlineLevel=30 -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+EnableVectorAggressiveReboxing -XX:+UseTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseAES -XX:UseSSE=4 -XX:ZUncommitDelay=5000 -XX:ZCollectionInterval=10 -XX:+ZProactive -XX:+UseStringDeduplication -XX:+UseFastUnorderedTimeStamps -XX:LockingMode=0 -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:+EnableDynamicAgentLoading -XX:+UseNUMA -XX:+UseNUMAInterleaving -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseCountedLoopSafepoints -XX:+ResizeTLAB -Dsun.zip.disableMemoryMapping=true -Djdk.io.File.enableADS=false -XX:+UseThreadPriorities -Dprism.vsync=false -XX:ThreadPriorityPolicy=1 --enable-preview -XX:+UnlockDiagnosticVMOptions -XX:-UseAESIntrinsics -XX:+UseFMA -XX:+OptimizeStringConcat -XX:InlineSmallCode=3500 -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+UseSHA -XX:+UseCRC32Intrinsics -XX:+UsePopCountInstruction -XX:UseAVX=2 -XX:+EliminateLocks -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSHA256Intrinsics -XX:+UseSSE42Intrinsics -XX:+UseSHA512Intrinsics -XX:AllocatePrefetchDistance=256 -XX:+PreserveFramePointer -XX:LoopMaxUnroll=64 -XX:AllocatePrefetchLines=3 -XX:AllocatePrefetchStepSize=4 -XX:+UseCondCardMark -XX:+UseSuperWord -XX:+UseCMoveUnconditionally -XX:+UseUnalignedAccesses -XX:+UseVectorCmov -XX:+UseCodeCacheFlushing -XX:+EnableContended -XX:+RestrictContended -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:LoopUnrollLimit=100 -XX:+UseFastJNIAccessors -XX:+AlwaysActAsServerClassMachine -XX:-UseAdaptiveNUMAChunkSizing -XX:ReservedCodeCacheSize=1024m -XX:+UseXmmI2F -XX:+UseXmmRegToRegMoveAll -XX:+ZGenerational -Xverify:none -XX:+UseCLMUL -XX:+UseCountLeadingZerosInstruction -XX:+UseCountTrailingZerosInstruction -XX:+UseOnlyInlinedBimorphic -XX:-UseDynamicNumberOfCompilerThreads -XX:+UseLoopInvariantCodeMotion -Djdk.nio.maxCachedBufferSize=1048576 -XX:+TrustFinalNonStaticFields -XX:+CompactStrings -XX:+AlignVector -XX:+AlwaysCompileLoopMethods -XX:+AlwaysPreTouchStacks -XX:-AlwaysTenure -XX:+ExpandSubTypeCheckAtParseTime -XX:+ForceTimeHighResolution -XX:+AllowParallelDefineClass -XX:+UseXMMForObjInit -XX:+UseXmmI2D -XX:+UsePoly1305Intrinsics -XX:+UseStoreImmI16 -XX:+OptoScheduling -XX:+PerfBypassFileSystemCheck -XX:+PreferInterpreterNativeStubs -XX:+OptoBundling -Dmixin.dumpTargetOnFailure=true -XX:NUMAChunkResizeWeight=35 -XX:NUMASpaceResizeRate=3221225472 -XX:+UseCriticalJavaThreadPriority -XX:FreqInlineSize=450 -XX:MaxRecursiveInlineLevel=5 -XX:+UseInlineCaches -Dfml.networkconnection.maxpacketsize=31457280 -Dfml.readTimeout=120 -Dfml.queryResultTimeout=120 -XX:LoopStripMiningIter=100 -XX:+Inline -XX:AllocatePrefetchStyle=2 -XX:AllocatePrefetchLines=2 -XX:+TrapBasedNullChecks -XX:+UseProfiledLoopPredicate -XX:+UseJumpTables -XX:+DisableAttachMechanism -XX:+TrapBasedRangeChecks -XX:+UsePerfData -XX:-RelaxAccessControlCheck -XX:-UseGCOverheadLimit -XX:-DebugNonSafepoints -XX:-AllowUserSignalHandlers -XX:-SafepointTimeout -Dsun.java2d.opengl=true -Dsun.java2d.d3d=false -XX:+UseUnalignedLoadStores -XX:+DoEscapeAnalysis -XX:ContendedPaddingWidth=256 -Dsun.nio.MaxDirectMemorySize=32G -XX:MaxDirectMemorySize=32G -Dorg.lwjgl.system.allocator=jemalloc -Diris.use-vbo=true -Djdk.nio.maxCachedBufferSize=262144 -Dorg.lwjgl.util.NoChecks=true -Djava.net.preferIPv4Stack=true -Dsodium.useNioBuffers=true -Dio.netty.buffer.checkAccessible=false -Dio.netty.buffer.checkBounds=false -Dio.netty.threadLocalDirectBufferSize=65536 -Dio.netty.leakDetection.level=disabled -Dio.netty.allocator.useCacheForAllThreads=true -Dio.netty.threadLocalMap.stringBuilder.initialSize=2048 -Dio.netty.threadLocalMap.stringBuilder.maxSize=8192 -Dio.netty.maxThreadLocalCharBufferSize=32768 -XX:+InlineClassNatives -XX:+ScavengeBeforeFullGC -Dc2me.useRegionScheduler=true -XX:AdaptiveSizePolicyInitializingSteps=64 -XX:AdaptiveSizePolicyWeight=25 -XX:AdaptiveTimeWeight=40 -XX:AllocateInstancePrefetchLines=4 -XX:AllocatePrefetchInstr=1 -XX:AllocatePrefetchLines=4 -XX:AllocatePrefetchStepSize=8 -XX:ArrayCopyLoadStoreMaxElem=16 -XX:ArrayOperationPartialInlineSize=64 -XX:AutoBoxCacheMax=1024 -XX:AvgMonitorsPerThreadEstimate=2048 -XX:C1InlineStackLimit=15 -XX:C1MaxInlineLevel=15 -XX:C1MaxInlineSize=64 -XX:C1MaxRecursiveInlineLevel=3 -XX:C1MaxTrivialSize=12 -XX:CompileThreshold=1500 -XX:CompilerThreadPriority=0 -XX:-DebugInlinedCalls -XX:-DelayCompilerStubsGeneration -XX:+DisablePrimordialThreadGuardPages -XX:-DontCompileHugeMethods -XX:+DontYieldALot -XX:EliminateAllocationArraySizeLimit=128 -XX:EliminateAllocationFieldsLimit=1024 -XX:EscapeAnalysisTimeout=100.0 -XX:ErrorLogPrintCodeLimit=0 -XX:+ExplicitGCInvokesConcurrent -XX:G1ConcRefinementThreads=12 -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=5 -XX:G1NewSizePercent=15 -XX:G1MaxNewSizePercent=40 -XX:G1MixedGCLiveThresholdPercent=93 -XX:G1SATBBufferSize=2048 -XX:G1SATBBufferEnqueueingThresholdPercent=80 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:G1PeriodicGCInterval=600000 -XX:+G1PeriodicGCInvokesConcurrent -XX:-G1UseReferencePrecleaning -XX:GCTimeLimit=90 -XX:GCTimeRatio=80 -XX:G1ConcMarkStepDurationMillis=4.0 -XX:G1ExpandByPercentOfAvailable=40 -XX:G1OldCSetRegionThresholdPercent=25 -XX:HeapBaseMinAddress=4294967296 -XX:-IntelJccErratumMitigation -XX:LoopOptsCount=43 -XX:LoopPercentProfileLimit=10 -XX:LiveNodeCountInliningCutoff=60000 -XX:-LogEvents -XX:LoopStripMiningIterShortLoop=5 -XX:MaxInlineSize=400 -XX:LoopUnrollMin=2 -XX:MaxVectorSize=64 -XX:MetaspaceSize=268435456 -XX:MinRAMPercentage=5.0 -XX:TieredStopAtLevel=4
+
+
+ChatGPT recommend
+ -XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+UseZGC -XX:ZUncommitDelay=1000 -XX:ZCollectionInterval=3 -XX:+ZProactive -XX:+EnableJVMCI -XX:+EnableJVMCIProduct -XX:+TieredCompilation -XX:+UseAES -XX:+UseAESIntrinsics -XX:ReservedCodeCacheSize=1024m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:UseAVX=2 -XX:+UseSuperWord -XX:+UseFMA -XX:+UseSHA -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseCRC32Intrinsics -XX:+UseFastJNIAccessors -XX:+UseFastUnorderedTimeStamps -XX:+DoEscapeAnalysis -Dsun.nio.MaxDirectMemorySize=32G -XX:MaxDirectMemorySize=32G -Dorg.lwjgl.system.allocator=system -Dio.netty.leakDetection.level=disabled -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true
+
+
+
+Me
+
+-XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+UseZGC -XX:ZUncommitDelay=1000 -XX:ZCollectionInterval=15 -XX:+ZProactive -XX:+EnableJVMCI -XX:+EnableJVMCIProduct -XX:+TieredCompilation -XX:+UseAES -XX:+UseAESIntrinsics -XX:UseAVX=2 -XX:+UseSuperWord -XX:+UseFMA -XX:+UseSHA -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseCRC32Intrinsics -XX:+UseFastJNIAccessors -XX:+DoEscapeAnalysis -XX:MaxDirectMemorySize=32G -Dorg.lwjgl.system.allocator=jemalloc -Dio.netty.leakDetection.level=disabled -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:+UseCompressedClassPointers -XX:+UseTLAB -XX:+ResizeTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseXMMForObjInit -XX:+UseSHA256Intrinsics -XX:+UseSHA512Intrinsics -XX:+UsePopCountInstruction -XX:+Inline  -XX:+AlwaysCompileLoopMethods -XX:+UseCountedLoopSafepoints -XX:+UseProfiledLoopPredicate -XX:+UseJumpTables -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+OptimizeFill -XX:+OptimizeStringConcat -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+EliminateLocks -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSSE42Intrinsics -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:+InlineClassNatives -XX:+CompactStrings -XX:+AlignVector -XX:+EnableContended -XX:+RestrictContended --add-modules jdk.incubator.vector -XX:CICompilerCount=14 -XX:+EagerJVMCI -XX:+EnableVectorAggressiveReboxing -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+OptoScheduling -XX:+OptoBundling -XX:+TrustFinalNonStaticFields -XX:+TrapBasedRangeChecks -XX:+TrapBasedNullChecks -XX:+UseCMoveUnconditionally -XX:+UseCharacterCompareIntrinsics -XX:+UseCompressedOops -XX:+UseNUMA -XX:+UseStoreImmI16 -XX:+UseNUMAInterleaving -XX:+UseStringDeduplication -XX:+UseVectorCmov -XX:+UseXmmI2D -XX:+UseXmmI2F -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0 -Djdk.incubator.vector.VECTOR_ACCESS_INDEX_CHECK=0 -XX:+PerfDisableSharedMem -XX:MaxHeapFreeRatio=30 -XX:MinHeapFreeRatio=5 -XX:+TieredCompilation -XX:+UseGraalJIT -XX:+UseCriticalJavaThreadPriority -XX:+UseCriticalCompilerThreadPriority -XX:ReservedCodeCacheSize=2048m -XX:+UseFastUnorderedTimeStamps -XX:MaxInlineLevel=30 -XX:InlineSmallCode=2500 -XX:FreqInlineSize=450 -XX:MaxRecursiveInlineLevel=4 -XX:C1InlineStackLimit=10 -XX:C1MaxInlineLevel=15 -XX:C1MaxInlineSize=60 -XX:C1MaxRecursiveInlineLevel=3 -XX:C1MaxTrivialSize=12 -XX:MaxInlineSize=60 -XX:LoopUnrollMin=6 -XX:TieredStopAtLevel=4 -XX:Tier3CompileThreshold=1000 -XX:Tier4CompileThreshold=10000
+
+
+
+DEBUG
+
+
+-XX:+UnlockExperimentalVMOptions -XX:+UnlockDiagnosticVMOptions -XX:+UseZGC -XX:ZUncommitDelay=1000 -XX:ZCollectionInterval=15 -XX:+ZProactive -XX:+EnableJVMCI -XX:+EnableJVMCIProduct -XX:+TieredCompilation -XX:+UseAES -XX:+UseAESIntrinsics -XX:UseAVX=2 -XX:+UseSuperWord -XX:+UseFMA -XX:+UseSHA -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseCRC32Intrinsics -XX:+UseFastJNIAccessors -XX:+DoEscapeAnalysis -XX:MaxDirectMemorySize=32G -XX:+UseCompressedClassPointers -XX:+UseTLAB -XX:+ResizeTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseXMMForObjInit -XX:+UseSHA256Intrinsics -XX:+UseSHA512Intrinsics -XX:+UsePopCountInstruction -XX:+Inline  -XX:+AlwaysCompileLoopMethods -XX:+UseCountedLoopSafepoints -XX:+UseProfiledLoopPredicate -XX:+UseJumpTables -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+OptimizeFill -XX:+OptimizeStringConcat -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+EliminateLocks -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSSE42Intrinsics -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:+InlineClassNatives -XX:+CompactStrings -XX:+AlignVector -XX:+EnableContended -XX:+RestrictContended --add-modules jdk.incubator.vector -XX:CICompilerCount=14 -XX:+EagerJVMCI -XX:+EnableVectorAggressiveReboxing -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+OptoScheduling -XX:+OptoBundling -XX:+TrustFinalNonStaticFields -XX:+TrapBasedRangeChecks -XX:+TrapBasedNullChecks -XX:+UseCMoveUnconditionally -XX:+UseCharacterCompareIntrinsics -XX:+UseCompressedOops -XX:+UseNUMA -XX:+UseStoreImmI16 -XX:+UseNUMAInterleaving -XX:+UseStringDeduplication -XX:+UseVectorCmov -XX:+UseXmmI2D -XX:+UseXmmI2F -XX:+PerfDisableSharedMem -XX:MaxHeapFreeRatio=30 -XX:MinHeapFreeRatio=5 -XX:+TieredCompilation -XX:+UseGraalJIT -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseCriticalJavaThreadPriority -XX:+UseCriticalCompilerThreadPriority -XX:+PrintFlagsFinal -XX:-ReduceNumberOfCompilerThreads -XX:ReservedCodeCacheSize=2048m -XX:+UseFastUnorderedTimeStamps -XX:MaxInlineLevel=30 -XX:InlineSmallCode=2500 -XX:FreqInlineSize=450 -XX:MaxRecursiveInlineLevel=4 -XX:C1InlineStackLimit=10 -XX:C1MaxInlineLevel=15 -XX:C1MaxInlineSize=60 -XX:C1MaxRecursiveInlineLevel=3 -XX:C1MaxTrivialSize=12 -XX:MaxInlineSize=60 -XX:LoopUnrollMin=6 -XX:TieredStopAtLevel=4 -XX:Tier3CompileThreshold=1000 -XX:Tier4CompileThreshold=10000
+
+
+
+
+
 
