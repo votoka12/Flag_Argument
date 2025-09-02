@@ -324,17 +324,3 @@ When testing: you can add -XX:+PrintFlagsFinal to confirm whether the flag is pr
 📦 JVM Max Memory Setting
 -Xmx151G     			     # Set maximum heap size (compatible with ZGC + LargePage)  
 
-
-✅ Example Used Args – Tested for Smooth Chunk Loading
-I use Zulu 21.42.19 (21.0.7)
-OS: WIndows 11 Pro for Workstation
-Progressor 2xE5 2699v3(Unlock Turbo)
-Ram: 160GB DDR4 32Gb ECC (3x 2DRx4 and 2x 4Rx4) Skhynix 
-GTX 1660
-PSU VSP 1000W 
-
-
--Xmx151G -XX:+UnlockExperimentalVMOptions --add-modules jdk.incubator.vector -XX:+UseAllWindowsProcessorGroups -XX:ActiveProcessorCount=72 -Djdk.virtualThreadScheduler.parallelism=72 -XX:CICompilerCount=36 -XX:+TieredCompilation -XX:MaxInlineLevel=15 -XX:+OptimizeFill -XX:+EnableVectorSupport -XX:+EnableVectorReboxing -XX:+EnableVectorAggressiveReboxing -XX:+UseTLAB -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:LargePageSizeInBytes=2m -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseAES -XX:UseSSE=4 -XX:+UseZGC -XX:ZUncommitDelay=10000 -XX:ZCollectionInterval=128 -XX:+ZProactive -XX:+UseStringDeduplication -XX:SoftMaxHeapSize=140G -XX:+UseFastUnorderedTimeStamps -XX:LockingMode=0 -XX:+ParallelRefProcEnabled -XX:+DisableExplicitGC -XX:-UseGraalJIT -Dfml.ignoreInvalidMinecraftCertificates=true -Dfml.ignorePatchDiscrepancies=true -Djava.net.preferIPv4Stack=true -XX:-EnableDynamicAgentLoading -XX:+UseNUMA -XX:+UseNUMAInterleaving -javaagent:D:\\Agent\\multicpu_agent.jar -XX:+UseXmmLoadAndClearUpper -XX:+UseLoopPredicate -XX:+ReduceBulkZeroing -XX:+UseFPUForSpilling -XX:+UseFastStosb -XX:+UseCountedLoopSafepoints -XX:+ResizeTLAB -Dsun.zip.disableMemoryMapping=true -Djdk.io.File.enableADS=false -XX:+UseThreadPriorities -Dprism.vsync=false -XX:ThreadPriorityPolicy=1 -XX:CompileThreshold=1500 --enable-preview -XX:+UnlockDiagnosticVMOptions -XX:+UseAESIntrinsics -XX:+UseFMA -XX:+OptimizeStringConcat -XX:InlineSmallCode=900 -XX:+AggressiveUnboxing -XX:+SuperWordLoopUnrollAnalysis -XX:+UseSHA -XX:+UseCRC32Intrinsics -XX:+UsePopCountInstruction -XX:UseAVX=2 -XX:+EliminateLocks -XX:+UseBMI1Instructions -XX:+UseBMI2Instructions -XX:+UseVectorizedMismatchIntrinsic -XX:+UseMultiplyToLenIntrinsic -XX:+UseSquareToLenIntrinsic -XX:+UseLibmIntrinsic -XX:+UseSHA256Intrinsics -XX:+UseSSE42Intrinsics -XX:+UseSHA512Intrinsics -XX:AllocatePrefetchDistance=256 -XX:+PreserveFramePointer -XX:LoopMaxUnroll=32 -XX:AllocatePrefetchLines=3 -XX:AllocatePrefetchStepSize=4 -XX:+UseCondCardMark -XX:+UseSuperWord -XX:+UseCMoveUnconditionally -XX:+UseUnalignedAccesses -XX:+UseVectorCmov -XX:+UseLargePagesIndividualAllocation -XX:+UseCodeCacheFlushing -XX:+EnableContended -XX:-RestrictContended -XX:+UseVectorStubs -XX:+UseOnStackReplacement -XX:LoopUnrollLimit=256 -XX:+UseFastJNIAccessors -XX:+AlwaysActAsServerClassMachine -XX:+UseAdaptiveNUMAChunkSizing -XX:TLABSize=712k -XX:ReservedCodeCacheSize=512m -XX:+UseXmmI2F -XX:+UseXmmRegToRegMoveAll -XX:+ZGenerational -Xverify:none -XX:+UseXmmLoadAndClearUpper -XX:+UseCLMUL -XX:+UseCountLeadingZerosInstruction -XX:+UseCountTrailingZerosInstruction -XX:+UseOnlyInlinedBimorphic -XX:+UseDynamicNumberOfCompilerThreads -XX:+UseLoopInvariantCodeMotion
-
-
-
